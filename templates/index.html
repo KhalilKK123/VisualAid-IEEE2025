@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>Multi-Feature Detection</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
         body { font-family: Arial, sans-serif; }
         .container { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
@@ -48,11 +49,39 @@
     </div>
 
     <script>
+        const socket = io();
         const video = document.getElementById('video');
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         
-       
+        // WebSocket event listeners
+        socket.on('object-detection-result', (data) => {
+            if (data.success) {
+                const objectsText = data.detections.map(obj => 
+                    `${obj.name} (${(obj.confidence * 100).toFixed(1)}%)`
+                ).join(', ');
+                document.getElementById('object-results-text').textContent = objectsText;
+            }
+        });
+
+        socket.on('scene-detection-result', (data) => {
+            if (data.success) {
+                const sceneContent = data.predictions.slice(0, 5).map(pred => `
+                    <li>${pred.scene} (${(pred.confidence * 100).toFixed(1)}%)</li>
+                `).join('');
+                document.getElementById('scene-results-content').innerHTML = `
+                    <p>The detected scene is: ${data.predictions[0].scene}</p>
+                    <ul>${sceneContent}</ul>
+                `;
+            }
+        });
+
+        socket.on('ocr-result', (data) => {
+            if (data.success) {
+                document.getElementById('text-results-content').textContent = data.detected_text || 'No text detected';
+            }
+        });
+        
         navigator.mediaDevices.getUserMedia({ video: true })
             .then(stream => {
                 video.srcObject = stream;
@@ -65,51 +94,33 @@
             .catch(console.error);
 
         // object detection
+        let lastDetectionTime = 0;
+        const DETECTION_INTERVAL = 1000; // 1 second between detections
+
         async function detectObjects() {
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
+            const currentTime = Date.now();
             
-            const formData = new FormData();
-            formData.append('image', blob);
-            
-            try {
-                const response = await fetch('/detect-objects', { method: 'POST', body: formData });
-                const data = await response.json();
-                if (data.success) {
-                    const objectsText = data.detections.map(obj => 
-                        `${obj.name} (${(obj.confidence * 100).toFixed(1)}%)`
-                    ).join(', ');
-                    document.getElementById('object-results-text').textContent = objectsText;
-                }
-            } catch (error) {
-                console.error('Object detection error:', error);
+            // Only perform detection if enough time has passed
+            if (currentTime - lastDetectionTime >= DETECTION_INTERVAL) {
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const imageData = canvas.toDataURL('image/jpeg');
+                
+                socket.emit('detect-objects', { image: imageData });
+                
+                // Update the last detection time
+                lastDetectionTime = currentTime;
             }
+            
+            // Continue the animation frame, but with controlled detection frequency
             requestAnimationFrame(detectObjects);
         }
 
         // Scene detection 
         document.getElementById('detect-scene-btn').addEventListener('click', async () => {
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
+            const imageData = canvas.toDataURL('image/jpeg');
             
-            const formData = new FormData();
-            formData.append('image', blob);
-            
-            try {
-                const response = await fetch('/detect-scene', { method: 'POST', body: formData });
-                const data = await response.json();
-                if (data.success) {
-                    const sceneContent = data.predictions.slice(0, 5).map(pred => `
-                        <li>${pred.scene} (${(pred.confidence * 100).toFixed(1)}%)</li>
-                    `).join('');
-                    document.getElementById('scene-results-content').innerHTML = `
-                        <p>The detected scene is: ${data.predictions[0].scene}</p>
-                        <ul>${sceneContent}</ul>
-                    `;
-                }
-            } catch (error) {
-                console.error('Scene detection error:', error);
-            }
+            socket.emit('detect-scene', { image: imageData });
         });
 
         // Text detection 
@@ -117,19 +128,7 @@
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             const imageData = canvas.toDataURL('image/jpeg');
             
-            try {
-                const response = await fetch('/ocr', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ image: imageData })
-                });
-                const data = await response.json();
-                if (data.success) {
-                    document.getElementById('text-results-content').textContent = data.detected_text || 'No text detected';
-                }
-            } catch (error) {
-                console.error('Text detection error:', error);
-            }
+            socket.emit('ocr', { image: imageData });
         });
     </script>
 </body>

@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
+from flask_socketio import SocketIO, emit
 import cv2
 import numpy as np
 import torch
@@ -15,6 +16,7 @@ import requests
 
 app = Flask(__name__)
 CORS(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -60,22 +62,26 @@ scene_transform = transforms.Compose([
 def home():
     return render_template('index.html')
 
-@app.route('/detect-objects', methods=['POST'])
-def detect_objects():
+@socketio.on('detect-objects')
+def handle_object_detection(data):
     try:
-        img_file = request.files['image'].read()
-        img = Image.open(io.BytesIO(img_file))
+        img_data = data.get('image')
+        header, encoded = img_data.split(',', 1)
+        img_bytes = base64.b64decode(encoded)
+        img = Image.open(io.BytesIO(img_bytes))
         results = yolo_model(img)
         detections = results.pandas().xyxy[0][['name', 'confidence']].to_dict(orient='records')
-        return jsonify({'success': True, 'detections': detections})
+        emit('object-detection-result', {'success': True, 'detections': detections})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+        emit('object-detection-result', {'success': False, 'error': str(e)})
 
-@app.route('/detect-scene', methods=['POST'])
-def detect_scene():
+@socketio.on('detect-scene')
+def handle_scene_detection(data):
     try:
-        img_file = request.files['image'].read()
-        img = Image.open(io.BytesIO(img_file))
+        img_data = data.get('image')
+        header, encoded = img_data.split(',', 1)
+        img_bytes = base64.b64decode(encoded)
+        img = Image.open(io.BytesIO(img_bytes))
         img_tensor = scene_transform(img).unsqueeze(0)
         with torch.no_grad():
             outputs = places_model(img_tensor)
@@ -84,14 +90,13 @@ def detect_scene():
             'scene': places_labels[idx],
             'confidence': float(outputs[0][idx])
         } for idx in preds[0].tolist()]
-        return jsonify({'success': True, 'predictions': predictions})
+        emit('scene-detection-result', {'success': True, 'predictions': predictions})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+        emit('scene-detection-result', {'success': False, 'error': str(e)})
 
-@app.route('/ocr', methods=['POST'])
-def ocr():
+@socketio.on('ocr')
+def handle_ocr(data):
     try:
-        data = request.get_json()
         image_data = data.get('image', '')
         header, encoded = image_data.split(',', 1)
         image_bytes = base64.b64decode(encoded)
@@ -99,9 +104,9 @@ def ocr():
         image = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
         results = ocr_reader.readtext(image)
         detected_text = ' '.join([text[1] for text in results]) if results else ''
-        return jsonify({'success': True, 'detected_text': detected_text})
+        emit('ocr-result', {'success': True, 'detected_text': detected_text})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+        emit('ocr-result', {'success': False, 'error': str(e)})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    socketio.run(app, debug=True)
