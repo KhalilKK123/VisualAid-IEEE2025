@@ -48,6 +48,27 @@
         </div>
     </div>
 
+    <div class="results">
+        <div class="result-box" id="user-customization-section">
+            <h3>User Customization Test</h3>
+            <form id="user-customization-form">
+                <input type="email" id="user-email" placeholder="Enter Email" required>
+                <input type="text" id="user-customization" placeholder="Enter Customization (e.g., 1111100000)" required>
+                <button type="submit">Update Customization</button>
+            </form>
+            <div id="customization-result"></div>
+        </div>
+
+        <div class="result-box" id="user-info-section">
+            <h3>User Info Retrieval</h3>
+            <form id="user-info-form">
+                <input type="email" id="info-email" placeholder="Enter Email" required>
+                <button type="submit">Get User Info</button>
+            </form>
+            <div id="user-info-result"></div>
+        </div>
+    </div>
+
     <script>
         const socket = io();
         const video = document.getElementById('video');
@@ -129,6 +150,51 @@
             const imageData = canvas.toDataURL('image/jpeg');
             
             socket.emit('ocr', { image: imageData });
+        });
+
+        // New functions for Database API Testing
+        document.getElementById('user-customization-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('user-email').value;
+            const customization = document.getElementById('user-customization').value;
+
+            try {
+                const response = await fetch('/update_customization', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, customization })
+                });
+
+                const result = await response.json();
+                document.getElementById('customization-result').textContent = 
+                    result.success ? 'Customization Updated Successfully!' : `Error: ${result.message}`;
+            } catch (error) {
+                document.getElementById('customization-result').textContent = `Network Error: ${error.message}`;
+            }
+        });
+
+        document.getElementById('user-info-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('info-email').value;
+
+            try {
+                const response = await fetch(`/get_user_info?email=${encodeURIComponent(email)}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    document.getElementById('user-info-result').innerHTML = `
+                        <p>Name: ${result.name}</p>
+                        <p>Email: ${result.email}</p>
+                        <p>Customization: ${result.customization}</p>
+                    `;
+                } else {
+                    document.getElementById('user-info-result').textContent = `Error: ${result.message}`;
+                }
+            } catch (error) {
+                document.getElementById('user-info-result').textContent = `Network Error: ${error.message}`;
+            }
         });
     </script>
 </body>
