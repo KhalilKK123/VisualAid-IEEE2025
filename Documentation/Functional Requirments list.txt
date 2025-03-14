@@ -1,0 +1,51 @@
+Functional Requirements
+1. Mobile Application Framework
+- Cross-platform compatibility (Android and iOS).
+- Integration with an online database for data storage and synchronization.
+
+2. Object Recognition and Description
+- Real-time detection of common objects using the device’s camera.
+- Training using the Microsoft COCO dataset.
+- Customizable categories (e.g., furniture, people, vehicles) for object detection.
+- Audio feedback describing recognized objects.
+
+3. Scene Description
+- Contextual scene understanding (e.g., "You are in a park with trees and benches").
+- Training using the Places365-Standard dataset.
+- Audio feedback for scene descriptions.
+- Activation via on-click (button press).
+
+4. Text Recognition (OCR)
+- Detect and extract text from images or live camera feed.
+- Training using the SynthText dataset for English text recognition.
+- Support for English language (minimum requirement).
+- "Reading Mode" to capture documents/signs and read text aloud.
+
+5. Safety Alerts
+- Real-time detection of hazards (stairs, obstacles, moving vehicles).
+- Training using the KITTI Vision Benchmark Suite.
+- Immediate audio warnings for detected hazards.
+
+6. User Interface (UI)
+- Simple navigation optimized for visually impaired users (large buttons, voice commands).
+- Voice command support for app control.
+- Onboarding tutorial to guide users through app features.
+
+7. Real-Time vs. On-Click Functionality
+- Real-time features:
+- Object Recognition
+- Safety Alerts
+- On-click features:
+- Scene Description
+- Text Recognition
+
+8. Documentation
+- A1-sized poster detailing technical specifications, methodology, tools, and techniques.
+- Brief user manual explaining app usage and features.
+
+9. Data and Compliance
+- Use licensed datasets (Microsoft COCO, Places365, SynthText, KITTI).
+- Ensure compliance with data privacy and ethical regulations.
+
+10. Additional Features (Optional but Encouraged)
+- Implementation of innovative bonus features (e.g., multi-language OCR support, advanced hazard detection).
