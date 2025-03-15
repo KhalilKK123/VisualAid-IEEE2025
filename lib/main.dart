@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:visual_aid_ui/ws/backend_conn.dart';
 import 'package:visual_aid_ui/ws/object_recognition_screen.dart';
+import 'package:visual_aid_ui/ws/scene_description_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -66,21 +67,21 @@ class _MyHomePageState extends State<MyHomePage> {
               },
               child: Text('Detect Object'),
             ),
-            // ElevatedButton(
-            //   onPressed: () {
-            //     Navigator.push(
-            //       context,
-            //       MaterialPageRoute(
-            //         builder:
-            //             (context) => SceneDescriptionScreen(
-            //               camera: camera,
-            //               backend: backend,
-            //             ),
-            //       ),
-            //     );
-            //   },
-            //   child: Text('Describe Scene'),
-            // ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder:
+                        (context) => SceneDescriptionScreen(
+                          camera: camera,
+                          backend: backend,
+                        ),
+                  ),
+                );
+              },
+              child: Text('Describe Scene'),
+            ),
             // ElevatedButton(
             //   onPressed: () {
             //     Navigator.push(
