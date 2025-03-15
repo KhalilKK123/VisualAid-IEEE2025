@@ -3,6 +3,7 @@ import 'package:camera/camera.dart';
 import 'package:visual_aid_ui/ws/backend_conn.dart';
 import 'package:visual_aid_ui/ws/object_recognition_screen.dart';
 import 'package:visual_aid_ui/ws/scene_description_screen.dart';
+import 'package:visual_aid_ui/ws/text_reading_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -82,19 +83,19 @@ class _MyHomePageState extends State<MyHomePage> {
               },
               child: Text('Describe Scene'),
             ),
-            // ElevatedButton(
-            //   onPressed: () {
-            //     Navigator.push(
-            //       context,
-            //       MaterialPageRoute(
-            //         builder:
-            //             (context) =>
-            //                 TextReadingScreen(camera: camera, backend: backend),
-            //       ),
-            //     );
-            //   },
-            //   child: Text('Read Text'),
-            // ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder:
+                        (context) =>
+                            TextReadingScreen(camera: camera, backend: backend),
+                  ),
+                );
+              },
+              child: Text('Read Text'),
+            ),
           ],
         ),
       ),
