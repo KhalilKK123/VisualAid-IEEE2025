@@ -109,20 +109,22 @@ class _ObjectRecognitionScreenState extends State<ObjectRecognitionScreen> {
     return Scaffold(
       appBar: AppBar(title: Text('Object Recognition')),
       body: Center(
-        child: Column(
-          children: [
-            FutureBuilder<void>(
-              future: _initializeControllerFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.done) {
-                  return CameraPreview(_controller);
-                } else {
-                  return Center(child: CircularProgressIndicator());
-                }
-              },
-            ),
-            Padding(padding: const EdgeInsets.all(8.0), child: Text(result)),
-          ],
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              FutureBuilder<void>(
+                future: _initializeControllerFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.done) {
+                    return CameraPreview(_controller);
+                  } else {
+                    return Center(child: CircularProgressIndicator());
+                  }
+                },
+              ),
+              Padding(padding: const EdgeInsets.all(8.0), child: Text(result)),
+            ],
+          ),
         ),
       ),
     );

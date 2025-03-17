@@ -93,24 +93,26 @@ class _TextReadingScreenState extends State<TextReadingScreen> {
     return Scaffold(
       appBar: AppBar(title: Text('Text Reading')),
       body: Center(
-        child: Column(
-          children: [
-            FutureBuilder<void>(
-              future: _initializeControllerFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.done) {
-                  return CameraPreview(_controller);
-                } else {
-                  return Center(child: CircularProgressIndicator());
-                }
-              },
-            ),
-            ElevatedButton(
-              onPressed: captureAndProcessImage,
-              child: Text("click"),
-            ),
-            Padding(padding: const EdgeInsets.all(8.0), child: Text(result)),
-          ],
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              FutureBuilder<void>(
+                future: _initializeControllerFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.done) {
+                    return CameraPreview(_controller);
+                  } else {
+                    return Center(child: CircularProgressIndicator());
+                  }
+                },
+              ),
+              ElevatedButton(
+                onPressed: captureAndProcessImage,
+                child: Text("click"),
+              ),
+              Padding(padding: const EdgeInsets.all(8.0), child: Text(result)),
+            ],
+          ),
         ),
       ),
     );
