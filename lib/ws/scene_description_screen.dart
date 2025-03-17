@@ -39,7 +39,7 @@ class _SceneDescriptionScreenState extends State<SceneDescriptionScreen> {
 
   Future<void> initialize() async {
     backend.connectSocket();
-    startTimer();
+    // startTimer();
     await receiveScene();
   }
 
@@ -74,19 +74,19 @@ class _SceneDescriptionScreenState extends State<SceneDescriptionScreen> {
     }
   }
 
-  void startTimer() {
-    timer = Timer.periodic(Duration(seconds: 5), (Timer t) {
-      captureAndProcessImage();
-    });
-  }
+  // void startTimer() {
+  //   timer = Timer.periodic(Duration(seconds: 5), (Timer t) {
+  //     captureAndProcessImage();
+  //   });
+  // }
 
-  void stopTimer() {
-    if (timer != null && timer!.isActive) {
-      timer!.cancel();
-      timer = null;
-      print("Timer cancelled");
-    }
-  }
+  // void stopTimer() {
+  //   if (timer != null && timer!.isActive) {
+  //     timer!.cancel();
+  //     timer = null;
+  //     print("Timer cancelled");
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -105,6 +105,10 @@ class _SceneDescriptionScreenState extends State<SceneDescriptionScreen> {
                 }
               },
             ),
+            ElevatedButton(
+              onPressed: captureAndProcessImage,
+              child: Text("click"),
+            ),
             Padding(padding: const EdgeInsets.all(8.0), child: Text(result)),
           ],
         ),
@@ -116,7 +120,7 @@ class _SceneDescriptionScreenState extends State<SceneDescriptionScreen> {
   void dispose() {
     backend.disposeSocket();
     _controller.dispose();
-    stopTimer();
+    // stopTimer();
     super.dispose();
   }
 }
