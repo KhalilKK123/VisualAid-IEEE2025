@@ -156,11 +156,13 @@ def handle_scene_detection(data):
         with torch.no_grad():
             outputs = places_model(img_tensor)
         _, preds = torch.topk(outputs, 5)
-        predictions = [
+        descriptions = [
             {"scene": places_labels[idx], "confidence": float(outputs[0][idx])}
             for idx in preds[0].tolist()
         ]
-        emit("scene-description-result", {"success": True, "predictions": predictions})
+        emit(
+            "scene-description-result", {"success": True, "descriptions": descriptions}
+        )
     except Exception as e:
         emit("scene-description-result", {"success": False, "error": str(e)})
 
@@ -174,8 +176,8 @@ def handle_ocr(data):
         np_array = np.frombuffer(image_bytes, np.uint8)
         image = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
         results = ocr_reader.readtext(image)
-        detected_text = " ".join([text[1] for text in results]) if results else ""
-        emit("text-reading-result", {"success": True, "detected_text": detected_text})
+        text_output = " ".join([text[1] for text in results]) if results else ""
+        emit("text-reading-result", {"success": True, "text_output": text_output})
     except Exception as e:
         emit("text-reading-result", {"success": False, "error": str(e)})
 

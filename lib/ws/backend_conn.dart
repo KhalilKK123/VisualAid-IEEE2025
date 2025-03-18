@@ -63,7 +63,8 @@ class Backend {
     try {
       socket.on("object-detection-result", (data) {
         print("YOOOOOO $data");
-        controller.add(data.toString());
+        String finalOutput = data["detections"][0]["name"];
+        controller.add(finalOutput.toString());
       });
     } catch (e) {
       print(e);
@@ -88,7 +89,8 @@ class Backend {
     try {
       socket.on("scene-description-result", (data) {
         print("YOOOOOO $data");
-        controller.add(data.toString());
+        String finalOutput = data["descriptions"][0]["scene"];
+        controller.add(finalOutput.toString());
       });
     } catch (e) {
       print(e);
@@ -113,7 +115,8 @@ class Backend {
     try {
       socket.on("text-reading-result", (data) {
         print("YOOOOOO $data");
-        controller.add(data.toString());
+        String finalOutput = data["text_output"];
+        controller.add(finalOutput.toString());
       });
     } catch (e) {
       print(e);
