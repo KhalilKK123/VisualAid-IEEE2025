@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:visual_aid_ui/tts.dart';
 import 'package:visual_aid_ui/ws/backend_conn.dart';
 
 class ObjectRecognitionScreen extends StatefulWidget {
@@ -21,18 +22,22 @@ class ObjectRecognitionScreen extends StatefulWidget {
 }
 
 class _ObjectRecognitionScreenState extends State<ObjectRecognitionScreen> {
+  final Backend backend;
+  _ObjectRecognitionScreenState({required this.backend});
+
   late CameraController _controller;
   late Future<void> _initializeControllerFuture;
   String result = "LOADING";
-  final Backend backend;
   late final Timer? timer;
 
-  _ObjectRecognitionScreenState({required this.backend});
+  late TTS tts;
 
   @override
   void initState() {
     _controller = CameraController(widget.camera, ResolutionPreset.medium);
     _initializeControllerFuture = _controller.initialize();
+    tts = TTS();
+    tts.initTts();
     super.initState();
     initialize();
   }
@@ -65,6 +70,7 @@ class _ObjectRecognitionScreenState extends State<ObjectRecognitionScreen> {
         setState(() {
           result = value;
         });
+        tts.speak(value);
       },
       onError: (error) {
         setState(() {
@@ -134,6 +140,7 @@ class _ObjectRecognitionScreenState extends State<ObjectRecognitionScreen> {
   void dispose() {
     backend.disposeSocket();
     _controller.dispose();
+    tts.stop();
     stopTimer();
     super.dispose();
   }

@@ -89,7 +89,9 @@ class Backend {
     try {
       socket.on("scene-description-result", (data) {
         print("YOOOOOO $data");
-        String finalOutput = data["descriptions"][0]["scene"];
+        String finalOutput = data["descriptions"][0]["scene"]
+            .split("_")
+            .join(" ");
         controller.add(finalOutput.toString());
       });
     } catch (e) {

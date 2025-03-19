@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:visual_aid_ui/tts.dart';
 import 'package:visual_aid_ui/ws/backend_conn.dart';
 
 class SceneDescriptionScreen extends StatefulWidget {
@@ -21,18 +22,22 @@ class SceneDescriptionScreen extends StatefulWidget {
 }
 
 class _SceneDescriptionScreenState extends State<SceneDescriptionScreen> {
+  final Backend backend;
+  _SceneDescriptionScreenState({required this.backend});
+
   late CameraController _controller;
   late Future<void> _initializeControllerFuture;
   String result = "LOADING";
-  final Backend backend;
-  late final Timer? timer;
+  // late final Timer? timer;
 
-  _SceneDescriptionScreenState({required this.backend});
+  late TTS tts;
 
   @override
   void initState() {
     _controller = CameraController(widget.camera, ResolutionPreset.medium);
     _initializeControllerFuture = _controller.initialize();
+    tts = TTS();
+    tts.initTts();
     super.initState();
     initialize();
   }
@@ -49,6 +54,7 @@ class _SceneDescriptionScreenState extends State<SceneDescriptionScreen> {
         setState(() {
           result = value;
         });
+        tts.speak(value);
       },
       onError: (error) {
         setState(() {
@@ -122,6 +128,7 @@ class _SceneDescriptionScreenState extends State<SceneDescriptionScreen> {
   void dispose() {
     backend.disposeSocket();
     _controller.dispose();
+    tts.stop();
     // stopTimer();
     super.dispose();
   }
