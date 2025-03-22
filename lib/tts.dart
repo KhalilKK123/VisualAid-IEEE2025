@@ -102,48 +102,6 @@ class TTS {
       ttsState = TtsState.stopped;
     });
   }
-
-  // later for settings page to adjust volume, pitch, and speed (rate)
-
-  // Widget _volume() {
-  //   return Slider(
-  //     value: volume,
-  //     onChanged: (newVolume) {
-  //       setState(() => volume = newVolume);
-  //     },
-  //     min: 0.0,
-  //     max: 1.0,
-  //     divisions: 10,
-  //     label: "Volume: ${volume.toStringAsFixed(1)}",
-  //   );
-  // }
-
-  // Widget _pitch() {
-  //   return Slider(
-  //     value: pitch,
-  //     onChanged: (newPitch) {
-  //       setState(() => pitch = newPitch);
-  //     },
-  //     min: 0.5,
-  //     max: 2.0,
-  //     divisions: 15,
-  //     label: "Pitch: ${pitch.toStringAsFixed(1)}",
-  //     activeColor: Colors.red,
-  //   );
-  // }
-
-  // Widget _rate() {
-  //   return Slider(
-  //     value: rate,
-  //     onChanged: (newRate) {
-  //       setState(() => rate = newRate);
-  //     },
-  //     min: 0.0,
-  //     max: 1.0,
-  //     divisions: 10,
-  //     label: "Rate: ${rate.toStringAsFixed(1)}",
-  //     activeColor: Colors.green,
-  //   );
 }
 
 enum TtsState { playing, stopped, paused, continued }
