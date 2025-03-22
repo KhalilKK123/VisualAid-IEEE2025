@@ -5,38 +5,38 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:visual_aid_ui/tts.dart';
-import 'package:visual_aid_ui/ws/backend_conn.dart';
+import 'package:visual_aid_ui/backend_conn.dart';
 
 class ObjectRecognitionScreen extends StatefulWidget {
   final CameraDescription camera;
   final Backend backend;
+  final TTS tts;
   const ObjectRecognitionScreen({
     super.key,
     required this.camera,
     required this.backend,
+    required this.tts,
   });
 
   @override
   State<ObjectRecognitionScreen> createState() =>
-      _ObjectRecognitionScreenState(backend: backend);
+      _ObjectRecognitionScreenState(backend: backend, tts: tts);
 }
 
 class _ObjectRecognitionScreenState extends State<ObjectRecognitionScreen> {
   final Backend backend;
-  _ObjectRecognitionScreenState({required this.backend});
+  final TTS tts;
+  _ObjectRecognitionScreenState({required this.backend, required this.tts});
 
   late CameraController _controller;
   late Future<void> _initializeControllerFuture;
   String result = "LOADING";
   late final Timer? timer;
 
-  late TTS tts;
-
   @override
   void initState() {
     _controller = CameraController(widget.camera, ResolutionPreset.medium);
     _initializeControllerFuture = _controller.initialize();
-    tts = TTS();
     tts.initTts();
     super.initState();
     initialize();

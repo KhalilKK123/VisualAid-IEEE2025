@@ -12,7 +12,7 @@ class TTS {
   double rate = 0.5;
   bool isCurrentLanguageInstalled = false;
 
-  String? _newVoiceText;
+  // String? _newVoiceText;
 
   TtsState ttsState = TtsState.stopped;
 

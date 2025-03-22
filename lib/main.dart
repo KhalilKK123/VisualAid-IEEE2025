@@ -1,31 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'package:visual_aid_ui/ws/backend_conn.dart';
-import 'package:visual_aid_ui/ws/object_recognition_screen.dart';
-import 'package:visual_aid_ui/ws/scene_description_screen.dart';
-import 'package:visual_aid_ui/ws/text_reading_screen.dart';
+import 'package:visual_aid_ui/backend_conn.dart';
+import 'package:visual_aid_ui/screens/object_recognition_screen.dart';
+import 'package:visual_aid_ui/screens/scene_description_screen.dart';
+import 'package:visual_aid_ui/screens/text_reading_screen.dart';
+import 'package:visual_aid_ui/screens/tts_settings_screen.dart';
+import 'package:visual_aid_ui/tts.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final cameras = await availableCameras();
   final firstCamera = cameras.first;
   final backend = Backend();
+  final tts = TTS();
 
-  runApp(MyApp(camera: firstCamera, backend: backend));
+  runApp(MyApp(camera: firstCamera, backend: backend, tts: tts));
 }
 
 class MyApp extends StatelessWidget {
   final CameraDescription camera;
   final Backend backend;
+  final TTS tts;
 
-  const MyApp({super.key, required this.camera, required this.backend});
+  const MyApp({
+    super.key,
+    required this.camera,
+    required this.backend,
+    required this.tts,
+  });
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'VisionAid',
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: MyHomePage(camera: camera, backend: backend),
+      home: MyHomePage(camera: camera, backend: backend, tts: tts),
     );
   }
 }
@@ -33,17 +42,28 @@ class MyApp extends StatelessWidget {
 class MyHomePage extends StatefulWidget {
   final CameraDescription camera;
   final Backend backend;
-  const MyHomePage({super.key, required this.camera, required this.backend});
+  final TTS tts;
+  const MyHomePage({
+    super.key,
+    required this.camera,
+    required this.backend,
+    required this.tts,
+  });
   @override
   _MyHomePageState createState() =>
-      _MyHomePageState(camera: camera, backend: backend);
+      _MyHomePageState(camera: camera, backend: backend, tts: tts);
 }
 
 class _MyHomePageState extends State<MyHomePage> {
   final CameraDescription camera;
   final Backend backend;
+  final TTS tts;
 
-  _MyHomePageState({required this.camera, required this.backend});
+  _MyHomePageState({
+    required this.camera,
+    required this.backend,
+    required this.tts,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -62,6 +82,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         (context) => ObjectRecognitionScreen(
                           camera: camera,
                           backend: backend,
+                          tts: tts,
                         ),
                   ),
                 );
@@ -77,6 +98,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         (context) => SceneDescriptionScreen(
                           camera: camera,
                           backend: backend,
+                          tts: tts,
                         ),
                   ),
                 );
@@ -89,12 +111,26 @@ class _MyHomePageState extends State<MyHomePage> {
                   context,
                   MaterialPageRoute(
                     builder:
-                        (context) =>
-                            TextReadingScreen(camera: camera, backend: backend),
+                        (context) => TextReadingScreen(
+                          camera: camera,
+                          backend: backend,
+                          tts: tts,
+                        ),
                   ),
                 );
               },
               child: Text('Read Text'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => TtsSettingsScreen(tts: tts),
+                  ),
+                );
+              },
+              child: Text('TTS Settings'),
             ),
           ],
         ),

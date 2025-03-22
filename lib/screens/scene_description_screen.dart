@@ -5,38 +5,38 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:visual_aid_ui/tts.dart';
-import 'package:visual_aid_ui/ws/backend_conn.dart';
+import 'package:visual_aid_ui/backend_conn.dart';
 
-class TextReadingScreen extends StatefulWidget {
+class SceneDescriptionScreen extends StatefulWidget {
   final CameraDescription camera;
   final Backend backend;
-  const TextReadingScreen({
+  final TTS tts;
+  const SceneDescriptionScreen({
     super.key,
     required this.camera,
     required this.backend,
+    required this.tts,
   });
 
   @override
-  State<TextReadingScreen> createState() =>
-      _TextReadingScreenState(backend: backend);
+  State<SceneDescriptionScreen> createState() =>
+      _SceneDescriptionScreenState(backend: backend, tts: tts);
 }
 
-class _TextReadingScreenState extends State<TextReadingScreen> {
+class _SceneDescriptionScreenState extends State<SceneDescriptionScreen> {
   final Backend backend;
-  _TextReadingScreenState({required this.backend});
+  final TTS tts;
+  _SceneDescriptionScreenState({required this.backend, required this.tts});
 
   late CameraController _controller;
   late Future<void> _initializeControllerFuture;
   String result = "LOADING";
   // late final Timer? timer;
 
-  late TTS tts;
-
   @override
   void initState() {
     _controller = CameraController(widget.camera, ResolutionPreset.medium);
     _initializeControllerFuture = _controller.initialize();
-    tts = TTS();
     tts.initTts();
     super.initState();
     initialize();
@@ -45,11 +45,11 @@ class _TextReadingScreenState extends State<TextReadingScreen> {
   Future<void> initialize() async {
     backend.connectSocket();
     // startTimer();
-    await receiveText();
+    await receiveScene();
   }
 
-  Future<void> receiveText() async {
-    backend.readTextStream().listen(
+  Future<void> receiveScene() async {
+    backend.describeSceneStream().listen(
       (String value) {
         setState(() {
           result = value;
@@ -60,7 +60,7 @@ class _TextReadingScreenState extends State<TextReadingScreen> {
         setState(() {
           result = error.toString();
         });
-        print("Error in receiveText: $error");
+        print("Error in receiveScene: $error");
       },
     );
   }
@@ -74,7 +74,7 @@ class _TextReadingScreenState extends State<TextReadingScreen> {
 
       List<int> imageBytes = await imageFile.readAsBytes();
       String base64Image = base64Encode(imageBytes);
-      backend.sendTextImage(base64Image);
+      backend.sendSceneImage(base64Image);
     } catch (e) {
       print("error taking photo: $e");
     }
@@ -97,7 +97,7 @@ class _TextReadingScreenState extends State<TextReadingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Text Reading')),
+      appBar: AppBar(title: Text('Scene Description')),
       body: Center(
         child: SingleChildScrollView(
           child: Column(
