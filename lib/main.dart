@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:visual_aid_ui/backend_conn.dart';
+import 'package:visual_aid_ui/screens/barcode_scanner_screen.dart';
 import 'package:visual_aid_ui/screens/object_recognition_screen.dart';
 import 'package:visual_aid_ui/screens/scene_description_screen.dart';
 import 'package:visual_aid_ui/screens/text_reading_screen.dart';
@@ -120,6 +121,19 @@ class _MyHomePageState extends State<MyHomePage> {
                 );
               },
               child: Text('Read Text'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder:
+                        (context) =>
+                            BarcodeScannerScreen(backend: backend, tts: tts),
+                  ),
+                );
+              },
+              child: Text('Scan Barcode'),
             ),
             ElevatedButton(
               onPressed: () {
