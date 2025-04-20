@@ -1,154 +1,61 @@
+// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'package:visual_aid_ui/backend_conn.dart';
-import 'package:visual_aid_ui/screens/barcode_scanner_screen.dart';
-import 'package:visual_aid_ui/screens/object_recognition_screen.dart';
-import 'package:visual_aid_ui/screens/scene_description_screen.dart';
-import 'package:visual_aid_ui/screens/text_reading_screen.dart';
-import 'package:visual_aid_ui/screens/tts_settings_screen.dart';
-import 'package:visual_aid_ui/tts.dart';
+import 'package:flutter/services.dart';
+import 'app/carousel_navigation_app.dart';
+
+late CameraDescription firstCamera;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final cameras = await availableCameras();
-  final firstCamera = cameras.first;
-  final backend = Backend();
-  final tts = TTS();
 
-  runApp(MyApp(camera: firstCamera, backend: backend, tts: tts));
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+  ]);
+
+  try {
+
+    debugPrint("Fetching available cameras...");
+    final cameras = await availableCameras();
+
+    if (cameras.isEmpty) {
+       debugPrint("CRITICAL ERROR: No cameras available on this device!");
+       runApp(const ErrorApp(message: "No cameras found on this device."));
+       return;
+    }
+     debugPrint("Cameras found: ${cameras.length}. Using the first one.");
+     firstCamera = cameras.first;
+
+     runApp(CarouselNavigationApp(camera: firstCamera));
+
+  } catch (e) {
+     debugPrint("CRITICAL ERROR during camera initialization: $e");
+     runApp(ErrorApp(message: "Failed to initialize cameras: $e"));
+  }
 }
 
-class MyApp extends StatelessWidget {
-  final CameraDescription camera;
-  final Backend backend;
-  final TTS tts;
 
-  const MyApp({
-    super.key,
-    required this.camera,
-    required this.backend,
-    required this.tts,
-  });
+class ErrorApp extends StatelessWidget {
+  final String message;
+  const ErrorApp({super.key, required this.message});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'VisionAid',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: MyHomePage(camera: camera, backend: backend, tts: tts),
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  final CameraDescription camera;
-  final Backend backend;
-  final TTS tts;
-  const MyHomePage({
-    super.key,
-    required this.camera,
-    required this.backend,
-    required this.tts,
-  });
-  @override
-  _MyHomePageState createState() =>
-      _MyHomePageState(camera: camera, backend: backend, tts: tts);
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  final CameraDescription camera;
-  final Backend backend;
-  final TTS tts;
-
-  _MyHomePageState({
-    required this.camera,
-    required this.backend,
-    required this.tts,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('VisionAid')),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder:
-                        (context) => ObjectRecognitionScreen(
-                          camera: camera,
-                          backend: backend,
-                          tts: tts,
-                        ),
-                  ),
-                );
-              },
-              child: Text('Detect Object'),
+      home: Scaffold(
+        backgroundColor: Colors.red[900],
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Text(
+              "Application Error:\n$message",
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+              textAlign: TextAlign.center,
             ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder:
-                        (context) => SceneDescriptionScreen(
-                          camera: camera,
-                          backend: backend,
-                          tts: tts,
-                        ),
-                  ),
-                );
-              },
-              child: Text('Describe Scene'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder:
-                        (context) => TextReadingScreen(
-                          camera: camera,
-                          backend: backend,
-                          tts: tts,
-                        ),
-                  ),
-                );
-              },
-              child: Text('Read Text'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder:
-                        (context) =>
-                            BarcodeScannerScreen(backend: backend, tts: tts),
-                  ),
-                );
-              },
-              child: Text('Scan Barcode'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => TtsSettingsScreen(tts: tts),
-                  ),
-                );
-              },
-              child: Text('TTS Settings'),
-            ),
-          ],
+          ),
         ),
       ),
+       debugShowCheckedModeBanner: false,
     );
   }
 }

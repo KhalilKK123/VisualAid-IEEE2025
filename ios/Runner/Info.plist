@@ -2,16 +2,20 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>NSCameraUsageDescription</key>
-    <string>Camera permission is required for barcode scanning.</string>
-	<key>NSCameraUsageDescription</key>
-    <string>This app needs camera access to take photos.</string>
-    <key>NSPhotoLibraryUsageDescription</key>
-    <string>This app needs photo library access to save photos.</string>
+<key>NSCameraUsageDescription</key>
+<string>This app needs access to the camera for object detection and scanning.</string>
+<key>NSMicrophoneUsageDescription</key>
+<string>This app uses the microphone for audio processing.</string>
+
+<key>NSPhotoLibraryUsageDescription</key>
+<string>This app accesses your photo library to save images.</string>
+<key>NSSpeechRecognitionUsageDescription</key>
+<string>This app uses speech recognition to assist visually impaired users.</string>
+
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Visual Aid Ui</string>
+	<string>Ai Visualaid Frontend</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -19,7 +23,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>visual_aid_ui</string>
+	<string>ai_visualaid_frontend</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -51,5 +55,7 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>This app requires microphone access to enable voice navigation between pages.</string>
 </dict>
 </plist>
