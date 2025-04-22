@@ -1,3 +1,4 @@
+// lib/presentation/screens/home_screen.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
@@ -1026,7 +1027,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       debugPrint("Page changed from ${previousFeature.title} to ${newFeature.title}");
 
 
-      if(_ttsInitialized) _ttsService.stop();
+      if(_ttsInitialized) _ttsService.stop(); // Stop any ongoing speech
       _stopDetectionTimer();
 
       bool isSwitchingFromBarcode = previousFeature.id == barcodeScannerFeature.id;
@@ -1045,9 +1046,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
            debugPrint("Main camera disposed (awaited).");
        } else if (isSwitchingFromBarcode) {
            debugPrint("Switching FROM barcode page - initializing main camera...");
-           await _initializeMainCameraController(); // Await completion  
+           await _initializeMainCameraController(); // Await completion
            setState((){});
-           _buildCameraDisplay(false);
+           _buildCameraDisplay(false); // This might be redundant, state will update
            debugPrint("Main camera initialization attempt completed in onPageChanged.");
            // Force final UI update after init completes when coming from barcode
            if(mounted) setState((){});
@@ -1063,6 +1064,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           else if (previousFeature.id != barcodeScannerFeature.id) { _lastSceneTextResult = ""; }
         });
       } else { return; }
+
+      // Announce the new feature name
+      if (_ttsInitialized) {
+        _ttsService.speak(newFeature.title); // <<<--- ADDED TTS CALL
+        debugPrint("TTS announced feature: ${newFeature.title}");
+      }
 
       // Start timer for the NEW page if applicable
       final bool isNowRealtime = newFeature.id == objectDetectionFeature.id || newFeature.id == hazardDetectionFeature.id;
