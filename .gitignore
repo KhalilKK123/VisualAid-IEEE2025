@@ -46,3 +46,5 @@ app.*.map.json
 
 # python
 /.venv
+
+/backend/yolov8x-worldv2.pt

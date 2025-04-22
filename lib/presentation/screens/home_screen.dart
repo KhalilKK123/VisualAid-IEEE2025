@@ -98,7 +98,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   // --- Constants ------------------------------------------------------------------------------------------
   static const String _alertSoundPath = "audio/alert.mp3";
-  static const Duration _detectionInterval = Duration(seconds: 1);
+  static const Duration _detectionInterval = Duration(seconds: 3);
   static const Duration _hazardAlertPersistence = Duration(seconds: 4);
   static const Set<String> _hazardObjectNames = {
     "car", "bicycle", "motorcycle", "bus", "train", "truck", "boat",
