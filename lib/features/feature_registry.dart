@@ -1,13 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/models/feature_config.dart';
 
-import 'object_detection/presentation/pages/object_detection_page.dart';
-import 'scene_detection/presentation/pages/scene_detection_page.dart';
-import 'text_detection/presentation/pages/text_detection_page.dart';
-import 'hazard_detection/presentation/pages/hazard_detection_page.dart';
-import 'barcode_scanner/presentation/pages/barcode_scanner_page.dart';
-
-
 const FeatureConfig objectDetectionFeature = FeatureConfig(
   id: 'object_detection',
   title: 'Object Detection',
@@ -20,7 +13,15 @@ const FeatureConfig hazardDetectionFeature = FeatureConfig(
   id: 'hazard_detection',
   title: 'Hazard Detection',
   color: Colors.orangeAccent,
-  voiceCommandKeywords: ['page 2', 'second page', 'hazard', 'danger', 'alert', 'hazards', 'hazard detection'],
+  voiceCommandKeywords: [
+    'page 2',
+    'second page',
+    'hazard',
+    'danger',
+    'alert',
+    'hazards',
+    'hazard detection'
+  ],
   pageBuilder: _buildHazardDetectionPage,
 );
 
@@ -40,15 +41,19 @@ const FeatureConfig textDetectionFeature = FeatureConfig(
   pageBuilder: _buildTextDetectionPage,
 );
 
-
 const FeatureConfig barcodeScannerFeature = FeatureConfig(
   id: 'barcode_scanner',
   title: 'Barcode Scanner',
   color: Colors.teal,
-  voiceCommandKeywords: ['page 5', 'fifth page', 'barcode', 'scan code', 'scanner'],
+  voiceCommandKeywords: [
+    'page 5',
+    'fifth page',
+    'barcode',
+    'scan code',
+    'scanner'
+  ],
   pageBuilder: _buildBarcodeScannerPage,
 );
-
 
 final List<FeatureConfig> availableFeatures = [
   objectDetectionFeature,
@@ -57,7 +62,6 @@ final List<FeatureConfig> availableFeatures = [
   textDetectionFeature,
   barcodeScannerFeature,
 ];
-
 
 Widget _buildObjectDetectionPage(BuildContext context) {
   return const Placeholder();

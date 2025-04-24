@@ -16,7 +16,6 @@ class ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     final bool isTapEnabled = onTap != null;
 
     final iconColor = isListening
@@ -27,22 +26,18 @@ class ActionButton extends StatelessWidget {
 
     final buttonColor = isListening ? Colors.red.shade100 : Colors.white;
 
-
     final icon = isListening
         ? Icons.mic
         : isTapEnabled
             ? Icons.play_arrow
             : Icons.camera_alt;
 
-
     return Positioned(
-
       bottom: 80,
       left: 0,
       right: 0,
       child: Center(
         child: GestureDetector(
-
           onTap: onTap,
           onLongPress: onLongPress,
           child: Container(
@@ -51,15 +46,12 @@ class ActionButton extends StatelessWidget {
               color: buttonColor,
               boxShadow: [
                 BoxShadow(
-
                   color: Colors.black.withAlpha(isTapEnabled ? 60 : 30),
                   spreadRadius: isTapEnabled ? 3 : 1,
                   blurRadius: isTapEnabled ? 6 : 3,
                   offset: Offset(0, isTapEnabled ? 2 : 1),
                 ),
               ],
-
-
             ),
             padding: const EdgeInsets.all(15),
             child: Icon(

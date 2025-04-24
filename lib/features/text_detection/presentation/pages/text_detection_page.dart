@@ -2,12 +2,9 @@
 import 'package:flutter/material.dart';
 
 class TextDetectionPage extends StatelessWidget {
-  final String detectionResult; 
+  final String detectionResult;
 
-  const TextDetectionPage({
-    super.key,
-    required this.detectionResult 
-  });
+  const TextDetectionPage({super.key, required this.detectionResult});
 
   @override
   Widget build(BuildContext context) {
@@ -18,13 +15,13 @@ class TextDetectionPage extends StatelessWidget {
       child: Text(
         detectionResult.replaceAll('_', ' '),
         style: const TextStyle(
-          fontSize: 24, 
+          fontSize: 24,
           fontWeight: FontWeight.bold,
-          color: Colors.white, 
-          shadows: [ 
+          color: Colors.white,
+          shadows: [
             Shadow(
               blurRadius: 8.0,
-              color: Colors.black87, 
+              color: Colors.black87,
               offset: Offset(2.0, 2.0),
             ),
           ],

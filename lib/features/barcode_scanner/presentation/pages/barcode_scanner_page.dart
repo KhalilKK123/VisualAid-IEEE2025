@@ -18,7 +18,8 @@ class BarcodeScannerPage extends StatefulWidget {
   State<BarcodeScannerPage> createState() => _BarcodeScannerPageState();
 }
 
-class _BarcodeScannerPageState extends State<BarcodeScannerPage> with WidgetsBindingObserver {
+class _BarcodeScannerPageState extends State<BarcodeScannerPage>
+    with WidgetsBindingObserver {
   MobileScannerController? controller;
   StreamSubscription<Object?>? _subscription;
 
@@ -27,7 +28,6 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> with WidgetsBin
   bool _isProcessing = false;
   bool _scannerStarted = false;
   bool _isPageActive = true;
-
 
   @override
   void initState() {
@@ -38,89 +38,103 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> with WidgetsBin
   }
 
   Future<void> _initializeScanner() async {
-     debugPrint("[BarcodeScannerPage] Initializing Scanner...");
-     controller = MobileScannerController(
-        detectionSpeed: DetectionSpeed.normal,
-        facing: CameraFacing.back,
-        detectionTimeoutMs: 1500,
+    debugPrint("[BarcodeScannerPage] Initializing Scanner...");
+    controller = MobileScannerController(
+      detectionSpeed: DetectionSpeed.normal,
+      facing: CameraFacing.back,
+      detectionTimeoutMs: 1500,
+    );
 
-      );
-
-      await Future.delayed(const Duration(milliseconds: 200));
-      if (mounted && _isPageActive) {
-          _startListening();
-      } else {
-          debugPrint("[BarcodeScannerPage] Scanner init delayed, but page became inactive or unmounted.");
-          controller?.dispose();
-          controller = null;
-      }
+    await Future.delayed(const Duration(milliseconds: 200));
+    if (mounted && _isPageActive) {
+      _startListening();
+    } else {
+      debugPrint(
+          "[BarcodeScannerPage] Scanner init delayed, but page became inactive or unmounted.");
+      controller?.dispose();
+      controller = null;
+    }
   }
-
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-     super.didChangeAppLifecycleState(state);
-     if (!mounted) return;
-     debugPrint("[BarcodeScannerPage] AppLifecycleState: $state");
-     if (state == AppLifecycleState.resumed) {
-        _isPageActive = true;
-        if (controller == null) {
-           _initializeScanner();
-        } else if (!_scannerStarted) {
-          _startListening();
-        }
-     } else {
-         _isPageActive = false;
-         _stopListening();
-     }
+    super.didChangeAppLifecycleState(state);
+    if (!mounted) return;
+    debugPrint("[BarcodeScannerPage] AppLifecycleState: $state");
+    if (state == AppLifecycleState.resumed) {
+      _isPageActive = true;
+      if (controller == null) {
+        _initializeScanner();
+      } else if (!_scannerStarted) {
+        _startListening();
+      }
+    } else {
+      _isPageActive = false;
+      _stopListening();
+    }
   }
 
   void _startListening() async {
     if (!mounted || controller == null || _scannerStarted || !_isPageActive) {
-        debugPrint("[BarcodeScannerPage] Skipping startListening: mounted=$mounted, controllerNull=${controller==null}, started=$_scannerStarted, active=$_isPageActive");
-        return;
+      debugPrint(
+          "[BarcodeScannerPage] Skipping startListening: mounted=$mounted, controllerNull=${controller == null}, started=$_scannerStarted, active=$_isPageActive");
+      return;
     }
     debugPrint("[BarcodeScannerPage] Attempting to start scanner listening...");
     try {
       await controller!.start();
       if (!mounted || !_isPageActive) {
-         debugPrint("[BarcodeScannerPage] Page became inactive or unmounted during controller start. Stopping.");
-         await controller!.stop();
-         return;
+        debugPrint(
+            "[BarcodeScannerPage] Page became inactive or unmounted during controller start. Stopping.");
+        await controller!.stop();
+        return;
       }
 
       _subscription = controller!.barcodes.listen(_handleBarcode);
-      setState(() { _scannerStarted = true; });
-      debugPrint("[BarcodeScannerPage] Scanner listening started successfully.");
-
-    } catch (e,s) {
-        debugPrint("[BarcodeScannerPage] Error starting scanner controller or listener: $e \n$s");
-        if (mounted) {
-            setState(() { _scanResult = "Error starting scanner"; });
-        }
-        controller = null;
-        _scannerStarted = false;
+      setState(() {
+        _scannerStarted = true;
+      });
+      debugPrint(
+          "[BarcodeScannerPage] Scanner listening started successfully.");
+    } catch (e, s) {
+      debugPrint(
+          "[BarcodeScannerPage] Error starting scanner controller or listener: $e \n$s");
+      if (mounted) {
+        setState(() {
+          _scanResult = "Error starting scanner";
+        });
+      }
+      controller = null;
+      _scannerStarted = false;
     }
   }
 
   Future<void> _stopListening() async {
     if (controller == null || !_scannerStarted) {
-         debugPrint("[BarcodeScannerPage] Skipping stopListening: controllerNull=${controller==null}, notStarted=${!_scannerStarted}");
-        return;
+      debugPrint(
+          "[BarcodeScannerPage] Skipping stopListening: controllerNull=${controller == null}, notStarted=${!_scannerStarted}");
+      return;
     }
     debugPrint("[BarcodeScannerPage] Attempting to stop scanner listening...");
     try {
-       await _subscription?.cancel();
-       _subscription = null;
+      await _subscription?.cancel();
+      _subscription = null;
 
+      await controller!.stop();
+      debugPrint(
+          "[BarcodeScannerPage] Scanner listening stopped successfully.");
+      if (mounted)
+        setState(() {
+          _scannerStarted = false;
+        });
+    } catch (e, s) {
+      debugPrint(
+          "[BarcodeScannerPage] Error stopping barcode listener/controller: $e \n$s");
 
-       await controller!.stop();
-       debugPrint("[BarcodeScannerPage] Scanner listening stopped successfully.");
-       if(mounted) setState(() { _scannerStarted = false; });
-    } catch(e,s) {
-         debugPrint("[BarcodeScannerPage] Error stopping barcode listener/controller: $e \n$s");
-
-         if (mounted) setState(() { _scannerStarted = false; });
+      if (mounted)
+        setState(() {
+          _scannerStarted = false;
+        });
     }
   }
 
@@ -131,8 +145,9 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> with WidgetsBin
     if (barcodes.isNotEmpty) {
       final String? scannedValue = barcodes.first.rawValue;
 
-      if (scannedValue != null && scannedValue.isNotEmpty && scannedValue != _lastProcessedBarcode) {
-
+      if (scannedValue != null &&
+          scannedValue.isNotEmpty &&
+          scannedValue != _lastProcessedBarcode) {
         setState(() {
           _isProcessing = true;
           _scanResult = "Processing: $scannedValue";
@@ -141,9 +156,9 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> with WidgetsBin
         widget.ttsService.stop();
         debugPrint("[BarcodeScannerPage] Detected barcode: $scannedValue");
 
-
         try {
-          final productInfo = await widget.barcodeApiService.getProductInfo(scannedValue);
+          final productInfo =
+              await widget.barcodeApiService.getProductInfo(scannedValue);
           if (mounted) {
             setState(() {
               _scanResult = productInfo;
@@ -151,36 +166,37 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> with WidgetsBin
             widget.ttsService.speak(productInfo);
           }
         } catch (e) {
-           debugPrint("[BarcodeScannerPage] Error fetching barcode info: $e");
-           if (mounted) {
-             setState(() {
-                _scanResult = "Error fetching info";
-             });
-             widget.ttsService.speak("Error fetching info");
-           }
+          debugPrint("[BarcodeScannerPage] Error fetching barcode info: $e");
+          if (mounted) {
+            setState(() {
+              _scanResult = "Error fetching info";
+            });
+            widget.ttsService.speak("Error fetching info");
+          }
         } finally {
-           if (mounted) {
-              await Future.delayed(const Duration(milliseconds: 500));
-              if (mounted) setState(() { _isProcessing = false; });
+          if (mounted) {
+            await Future.delayed(const Duration(milliseconds: 500));
+            if (mounted)
+              setState(() {
+                _isProcessing = false;
+              });
 
-
-
-              await Future.delayed(const Duration(seconds: 3));
-              if (mounted && _lastProcessedBarcode == scannedValue && !_isProcessing) {
-                   setState(() {
-                       _lastProcessedBarcode = null;
-                       _scanResult = "Point camera at a barcode";
-                    });
-                    debugPrint("[BarcodeScannerPage] Resetting last processed barcode.");
-              }
-           }
+            await Future.delayed(const Duration(seconds: 3));
+            if (mounted &&
+                _lastProcessedBarcode == scannedValue &&
+                !_isProcessing) {
+              setState(() {
+                _lastProcessedBarcode = null;
+                _scanResult = "Point camera at a barcode";
+              });
+              debugPrint(
+                  "[BarcodeScannerPage] Resetting last processed barcode.");
+            }
+          }
         }
       }
     }
   }
-
-
-
 
   @override
   void dispose() {
@@ -208,19 +224,22 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> with WidgetsBin
         fit: StackFit.expand,
         children: [
           if (controller != null && _scannerStarted)
-             MobileScanner(
-                key: const ValueKey("MobileScannerWidget"),
-                controller: controller!,
-                scanWindow: scanWindow,
-                errorBuilder: (context, error, child) {
-                  String message = error.errorDetails?.message ?? 'Unknown scanner error';
-                  debugPrint("[BarcodeScannerPage] MobileScanner Error: $message");
-                  return Center(child: Text('Scanner Error: $message', style: const TextStyle(color: Colors.red)));
-                },
-             )
+            MobileScanner(
+              key: const ValueKey("MobileScannerWidget"),
+              controller: controller!,
+              scanWindow: scanWindow,
+              errorBuilder: (context, error, child) {
+                String message =
+                    error.errorDetails?.message ?? 'Unknown scanner error';
+                debugPrint(
+                    "[BarcodeScannerPage] MobileScanner Error: $message");
+                return Center(
+                    child: Text('Scanner Error: $message',
+                        style: const TextStyle(color: Colors.red)));
+              },
+            )
           else
             const Center(child: CircularProgressIndicator()),
-
           CustomPaint(
             painter: ScannerOverlayPainter(scanWindow),
           ),
@@ -245,7 +264,6 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> with WidgetsBin
     );
   }
 }
-
 
 class ScannerOverlayPainter extends CustomPainter {
   final Rect scanWindow;
@@ -272,13 +290,11 @@ class ScannerOverlayPainter extends CustomPainter {
     canvas.drawPath(cutOutPath, backgroundPaint);
     canvas.drawRect(scanWindow, borderPaint);
 
-
     final cornerPaint = Paint()
       ..color = Colors.tealAccent
       ..style = PaintingStyle.stroke
       ..strokeWidth = 4.0;
     const cornerLength = 20.0;
-
 
     canvas.drawPath(
       Path()
@@ -287,14 +303,14 @@ class ScannerOverlayPainter extends CustomPainter {
         ..lineTo(scanWindow.left + cornerLength, scanWindow.top),
       cornerPaint,
     );
-     canvas.drawPath(
+    canvas.drawPath(
       Path()
         ..moveTo(scanWindow.right - cornerLength, scanWindow.top)
         ..lineTo(scanWindow.right, scanWindow.top)
         ..lineTo(scanWindow.right, scanWindow.top + cornerLength),
       cornerPaint,
     );
-      canvas.drawPath(
+    canvas.drawPath(
       Path()
         ..moveTo(scanWindow.right, scanWindow.bottom - cornerLength)
         ..lineTo(scanWindow.right, scanWindow.bottom)
