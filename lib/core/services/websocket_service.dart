@@ -1,253 +1,145 @@
 // lib/core/services/websocket_service.dart
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:camera/camera.dart';
-import 'package:socket_io_client/socket_io_client.dart' as io;
+import 'package:flutter/foundation.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
+
+const String _serverUrl = 'http://xyz:5000';
 
 class WebSocketService {
-  final String _serverUrl =
-      'http://xyz:5000'; // Replace xyz with your actual backend IP
+  IO.Socket? _socket;
+  bool _isConnected = false;
 
-  io.Socket? _socket;
   final StreamController<Map<String, dynamic>> _responseController =
       StreamController<Map<String, dynamic>>.broadcast();
-  Timer? _connectionRetryTimer;
-  bool _isConnected = false;
-  bool _isConnecting = false;
-  int _retrySeconds = 5;
 
   Stream<Map<String, dynamic>> get responseStream => _responseController.stream;
   bool get isConnected => _isConnected;
 
+  WebSocketService() {}
+
   void connect() {
-    if (_isConnecting || _isConnected) {
-      debugPrint(
-          '[WebSocketService] Connect called but already connecting/connected.');
+    if (_isConnected && _socket != null) {
+      debugPrint('[SocketIOClient] Already connected.');
       return;
     }
 
-    _isConnecting = true;
-    _closeExistingSocket();
-    _cancelRetryTimer();
-    debugPrint(
-        '[WebSocketService] Attempting Socket.IO connection to: $_serverUrl');
+    debugPrint('[SocketIOClient] Attempting to connect to $_serverUrl...');
 
+    // --- Disconnect previous socket if any ---
+    _disposeSocket();
     try {
-      _socket = io.io(
-          _serverUrl,
-          io.OptionBuilder()
-              .setTransports(['websocket'])
-              .disableAutoConnect()
-              .enableReconnection()
-              .setTimeout(10000)
-              .setReconnectionDelay(1000)
-              .setReconnectionDelayMax(5000)
-              .setRandomizationFactor(0.5)
-              .build());
+      // --- Create Socket.IO Client Instance ---
+      _socket = IO.io(_serverUrl, <String, dynamic>{
+        'transports': ['websocket'],
+        'autoConnect': false,
+        'forceNew': true,
+      });
 
-      _socket!.onConnect((_) {
-        debugPrint('[WebSocketService] Socket.IO connected: ID ${_socket?.id}');
+      // --- Register Event Listeners ---
+      _socket?.onConnect((_) {
         _isConnected = true;
-        _isConnecting = false;
-        _retrySeconds = 5;
-        _responseController.add(
-            {'event': 'connect', 'result': 'Connected', 'id': _socket?.id});
+        debugPrint('[SocketIOClient] Connected: ${_socket?.id}');
       });
 
-      _socket!.onConnectError((data) {
-        debugPrint('[WebSocketService] Socket.IO Connection Error: $data');
-        _isConnected = false;
-        _isConnecting = false;
-        _responseController.addError('Connection Error: ${data ?? "Unknown"}');
-        _scheduleReconnect(isInitialFailure: true);
-      });
-
-      _socket!.on('connect_timeout', (data) {
-        debugPrint('[WebSocketService] Socket.IO Connection Timeout: $data');
-        _isConnected = false;
-        _isConnecting = false;
-        _responseController.addError('Connection Timeout');
-        _scheduleReconnect(isInitialFailure: true);
-      });
-
-      _socket!.onError((data) {
-        debugPrint('[WebSocketService] Socket.IO Error: $data');
-        _responseController.addError('Socket Error: ${data ?? "Unknown"}');
-        if (!_isConnected && !_isConnecting && _connectionRetryTimer == null) {
+      _socket?.on('response', (data) {
+        if (data is Map<String, dynamic>) {
+          if (kDebugMode) {
+            debugPrint('[SocketIOClient] Event "response" received: $data');
+          }
+          _responseController.add(data);
+        } else if (data != null) {
+          // Handle cases where backend might send non-map data unexpectedly
           debugPrint(
-              '[WebSocketService] Scheduling reconnect due to onError while disconnected.');
-          _scheduleReconnect();
-        }
-      });
-
-      _socket!.onDisconnect((reason) {
-        debugPrint('[WebSocketService] Socket.IO disconnected: $reason');
-        final wasConnected = _isConnected;
-        _isConnected = false;
-        _isConnecting = false;
-        if (reason != 'io client disconnect' && wasConnected) {
+              '[SocketIOClient] Received non-map data for "response": ${data.runtimeType} - $data');
           _responseController
-              .addError('Disconnected: ${reason ?? "Unknown reason"}');
-        }
-
-        if (reason != 'io client disconnect') {
-          _scheduleReconnect();
+              .add({'event': 'raw_response', 'data': data.toString()});
         } else {
           debugPrint(
-              '[WebSocketService] Manual disconnect requested, not scheduling reconnect.');
+              '[SocketIOClient] Received null data for "response" event.');
         }
       });
 
-      _socket!.on('response', (data) {
-        debugPrint('[WebSocketService] Received "response" event: $data');
-        try {
-          if (data is Map<String, dynamic>) {
-            _responseController.add(data);
-          } else if (data != null) {
-            if (data is String) {
-              _responseController.add({'result': data});
-            } else {
-              _responseController.add({'result': data.toString()});
-              debugPrint(
-                  '[WebSocketService] Received non-map data on "response", converting to string: $data');
-            }
-          } else {
-            debugPrint(
-                '[WebSocketService] Received null data on "response" event.');
-            _responseController.add({'result': null});
-          }
-        } catch (e, stackTrace) {
-          debugPrint(
-              '[WebSocketService] Error processing "response" event data: $e');
-          debugPrintStack(stackTrace: stackTrace);
-          _responseController.addError(
-              FormatException('Data Processing Error: $e'), stackTrace);
-        }
+      _socket?.onConnectError((error) {
+        _isConnected = false;
+        debugPrint('[SocketIOClient] Connection Error: $error');
+        _responseController
+            .add({'event': 'error', 'message': 'Connection Error: $error'});
+        _disposeSocket();
       });
 
-      _socket!.on(
-          'reconnecting',
-          (attempt) => debugPrint(
-              '[WebSocketService] Reconnecting attempt $attempt...'));
-      _socket!.on(
-          'reconnect',
-          (attempt) =>
-              debugPrint('[WebSocketService] Reconnected on attempt $attempt'));
-      _socket!.on('reconnect_attempt', (attempt) {
-        debugPrint('[WebSocketService] Reconnect attempt $attempt');
-      });
-      _socket!.on('reconnect_error',
-          (data) => debugPrint('[WebSocketService] Reconnect error: $data'));
-      _socket!.on('reconnect_failed', (data) {
-        debugPrint('[WebSocketService] Reconnect failed: $data');
-        _responseController.addError('Reconnect Failed');
+      _socket?.onError((error) {
+        debugPrint('[SocketIOClient] Socket Error: $error');
+        _responseController
+            .add({'event': 'error', 'message': 'Socket Error: $error'});
       });
 
-      _socket!.connect();
-    } catch (e, stackTrace) {
-      debugPrint('[WebSocketService] Error initializing Socket.IO client: $e');
-      debugPrintStack(stackTrace: stackTrace);
-      _isConnecting = false;
+      _socket?.onDisconnect((reason) {
+        _isConnected = false;
+        debugPrint('[SocketIOClient] Disconnected: $reason');
+        _responseController.add({'event': 'disconnect', 'reason': reason});
+        _disposeSocket();
+      });
+
+      // --- Initiate Connection ---
+      _socket?.connect();
+    } catch (e) {
       _isConnected = false;
-      _responseController.addError(
-          'Initialization Error: ${e.toString()}', stackTrace);
-      _scheduleReconnect(isInitialFailure: true);
+      debugPrint('[SocketIOClient] Error initializing socket: $e');
+      _responseController.add({
+        'event': 'error',
+        'message': 'Initialization failed: ${e.toString()}'
+      });
     }
   }
 
-  void sendImageForProcessing(XFile imageFile, String pageType,
-      {String? languageCode}) async {
-    if (!isConnected || _socket == null) {
-      debugPrint(
-          '[WebSocketService] Cannot send image for $pageType: Not connected.');
-      _responseController.addError('Cannot send: Not connected');
+  // --- Updated sendImageForProcessing ---
+  Future<void> sendImageForProcessing(XFile imageFile, String featureId,
+      {String? languageCode, String? requestType}) async {
+    if (!(_isConnected && _socket != null)) {
+      debugPrint('[SocketIOClient] Cannot send: Not connected.');
+      _responseController.add(
+          {'event': 'error', 'message': 'Cannot send request: Not connected.'});
       return;
     }
 
-    debugPrint(
-        '[WebSocketService] Preparing image for $pageType ${languageCode != null ? "(Lang: $languageCode)" : ""}...');
     try {
       final bytes = await imageFile.readAsBytes();
       final base64Image = base64Encode(bytes);
 
-      final payload = {
-        'type': pageType,
+      final Map<String, dynamic> data = {
+        'type': featureId,
         'image': base64Image,
-        if (pageType == 'text_detection' && languageCode != null)
-          'language': languageCode,
+        if (languageCode != null) 'language': languageCode,
+        if (requestType != null) 'request_type': requestType,
       };
 
-      final payloadSizeKB =
-          (json.encode(payload).length / 1024).toStringAsFixed(1);
-      debugPrint(
-          '[WebSocketService] Sending "message" event ($payloadSizeKB kB) with payload keys: ${payload.keys}');
+      _socket?.emit('message', data);
 
-      _socket!.emitWithAck('message', payload, ack: (ackData) {
-        debugPrint(
-            '[WebSocketService] Server acknowledged "message" event. Ack data: $ackData');
+      debugPrint(
+          '[SocketIOClient] Emitted "message". Type: $featureId, Lang: $languageCode, RequestType: $requestType');
+    } catch (e) {
+      debugPrint('[SocketIOClient] Error preparing/sending message: $e');
+      _responseController.add({
+        'event': 'error',
+        'message': 'Error sending request: ${e.toString()}'
       });
-    } catch (e, stackTrace) {
-      debugPrint(
-          '[WebSocketService] Error preparing/sending image for $pageType: $e');
-      debugPrintStack(
-          stackTrace: stackTrace,
-          label: '[WebSocketService] Send Image Error StackTrace');
-      _responseController.addError(
-          'Image send failed: ${e.toString()}', stackTrace);
     }
   }
 
-  void _scheduleReconnect({bool isInitialFailure = false}) {
-    if (_connectionRetryTimer?.isActive ?? false) {
-      debugPrint('[WebSocketService] Reconnect already scheduled.');
-      return;
-    }
-    _closeExistingSocket();
-    final currentDelay = isInitialFailure ? 3 : _retrySeconds;
-    debugPrint(
-        '[WebSocketService] Scheduling Socket.IO reconnect in $currentDelay seconds...');
-    _connectionRetryTimer = Timer(Duration(seconds: currentDelay), () {
-      if (!isInitialFailure) {
-        _retrySeconds = (_retrySeconds * 1.5).clamp(5, 60).toInt();
-        debugPrint(
-            '[WebSocketService] Next retry delay set to $_retrySeconds seconds.');
-      }
-      debugPrint('[WebSocketService] Attempting Socket.IO reconnection...');
-      connect();
-    });
-  }
-
-  void _cancelRetryTimer() {
-    _connectionRetryTimer?.cancel();
-    _connectionRetryTimer = null;
-  }
-
-  void _closeExistingSocket() {
+  void _disposeSocket() {
     if (_socket != null) {
-      debugPrint(
-          '[WebSocketService] Disposing existing Socket.IO socket (ID: ${_socket?.id})...');
-      try {
-        _socket!.dispose();
-      } catch (e) {
-        debugPrint('[WebSocketService] Exception disposing socket: $e');
-      } finally {
-        _socket = null;
-      }
+      debugPrint('[SocketIOClient] Disposing socket instance.');
+      _socket?.disconnect();
+      _socket?.dispose();
+      _socket = null;
     }
     _isConnected = false;
-    _isConnecting = false;
   }
 
   void close() {
-    debugPrint('[WebSocketService] Closing service requested...');
-    _cancelRetryTimer();
-    if (_socket?.connected ?? false) {
-      debugPrint('[WebSocketService] Manually disconnecting socket...');
-      _socket!.disconnect();
-    }
-    _closeExistingSocket();
-    _responseController.close();
-    debugPrint('[WebSocketService] Service closed.');
+    debugPrint('[SocketIOClient] close() called, disposing connection.');
+    _disposeSocket();
   }
 }

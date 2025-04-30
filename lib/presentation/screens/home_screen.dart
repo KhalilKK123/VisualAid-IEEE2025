@@ -17,6 +17,7 @@ import '../../core/services/tts_service.dart';
 import '../../core/services/barcode_api_service.dart';
 
 import '../../features/feature_registry.dart';
+import '../../features/supervision/presentation/pages/supervision_page.dart';
 import '../../features/object_detection/presentation/pages/object_detection_page.dart';
 import '../../features/hazard_detection/presentation/pages/hazard_detection_page.dart';
 import '../../features/scene_detection/presentation/pages/scene_detection_page.dart';
@@ -68,6 +69,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String _lastHazardRawResult = "";
   String _currentDisplayedHazardName = "";
   bool _isHazardAlertActive = false;
+
+  String _supervisionHazardName = "";
+  bool _supervisionIsHazardActive = false;
+  bool _isSupervisionProcessing = false;
+  String? _supervisionResultType;
+  String _supervisionDisplayResult = "";
 
   Timer? _hazardAlertClearTimer;
   Timer? _detectionTimer;
@@ -458,50 +465,158 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     if (data.containsKey('event') && data['event'] == 'connect') {
       _showStatusMessage("Connected", durationSeconds: 2);
-      _startDetectionTimerIfNeeded();
+      _startDetectionTimerIfNeeded(); // Start timer if needed
+      return;
+    }
+    if (data.containsKey('event') && data['event'] == 'connecting') {
+      _showStatusMessage("Connecting...", durationSeconds: 2);
+      return;
+    }
+    if (data.containsKey('event') &&
+        (data['event'] == 'disconnect' || data['event'] == 'error')) {
+      _handleWebSocketError(
+          data['message'] ?? data['reason'] ?? 'Unknown connection issue');
       return;
     }
 
+    // --- Process Actual Results ---
     if (data.containsKey('result')) {
       final resultTextRaw = data['result'] as String? ?? "No result";
-      final String rawDetectionsForHazards = resultTextRaw;
-      final String? receivedForFeatureId =
-          _lastRequestedFeatureId; // Use before clearing
+      final String rawDetectionsForHazards =
+          resultTextRaw; // Raw data needed for OD/Hazard
 
-      if (receivedForFeatureId == null) {
+      final bool isFromResultOfSuperVision =
+          data['is_from_supervision_llm'] == true;
+      final String? actualFeatureId = data['feature_id'] as String?;
+
+      // --- Route based on whether it's a SuperVision result or Direct result ---
+
+      if (isFromResultOfSuperVision) {
+        // --- Handle SuperVision Result ---
+        debugPrint('[HomeScreen] Processing SuperVision routed result...');
+        if (actualFeatureId == null) {
+          debugPrint(
+              '[HomeScreen] SuperVision result missing feature_id. Cannot process.');
+          if (mounted) {
+            setState(() {
+              _isSupervisionProcessing = false;
+              _supervisionDisplayResult = "Error: Invalid response from server";
+              _supervisionResultType = null;
+            });
+          }
+          return;
+        }
+
+        // Process the result and update SuperVision state variables
+        setState(() {
+          _supervisionResultType = actualFeatureId;
+          _supervisionDisplayResult = "";
+          _supervisionHazardName = "";
+          _supervisionIsHazardActive = false;
+          String textToSpeak = "";
+
+          if (actualFeatureId == objectDetectionFeature.id) {
+            final odResult = _processObjectDetection(rawDetectionsForHazards);
+            _supervisionDisplayResult = odResult['display'];
+            textToSpeak = odResult['speak']
+                ? odResult['speakText']
+                : "Object detection complete.";
+            String hazardName =
+                _processHazardDetection(rawDetectionsForHazards);
+            if (hazardName.isNotEmpty) {
+              _supervisionHazardName = hazardName;
+              _supervisionIsHazardActive = _isHazardAlertActive;
+              textToSpeak +=
+                  " Hazard detected: ${hazardName.replaceAll('_', ' ')}";
+            }
+          } else if (actualFeatureId == hazardDetectionFeature.id) {
+            String hazardName =
+                _processHazardDetection(rawDetectionsForHazards);
+            _supervisionHazardName = hazardName;
+            _supervisionIsHazardActive = _isHazardAlertActive;
+            _supervisionDisplayResult = hazardName.isNotEmpty
+                ? hazardName.replaceAll('_', ' ')
+                : "No hazards detected";
+            textToSpeak = hazardName.isNotEmpty
+                ? ""
+                : "Hazard scan complete. No hazards detected.";
+          } else if (actualFeatureId == sceneDetectionFeature.id) {
+            final sceneResult = _processSceneDetection(resultTextRaw);
+            _supervisionDisplayResult = sceneResult['display'];
+            textToSpeak = sceneResult['speak']
+                ? sceneResult['speakText']
+                : "Scene analysis complete.";
+          } else if (actualFeatureId == textDetectionFeature.id) {
+            final textResult = _processTextDetection(resultTextRaw);
+            _supervisionDisplayResult = textResult['display'];
+            textToSpeak = textResult['speak']
+                ? textResult['speakText']
+                : "Text analysis complete.";
+          } else {
+            debugPrint(
+                "[HomeScreen] SuperVision received result for UNKNOWN feature ID: $actualFeatureId.");
+            _supervisionDisplayResult = "Unknown result type received";
+            _supervisionResultType = null;
+            textToSpeak = "Analysis complete with unknown result type.";
+          }
+
+          // Speak result for SuperVision (excluding hazards already spoken by alert)
+          if (_ttsInitialized &&
+              textToSpeak.isNotEmpty &&
+              actualFeatureId != hazardDetectionFeature.id) {
+            _ttsService.speak(textToSpeak);
+          }
+
+          _isSupervisionProcessing = false; // Turn off loading indicator
+        });
+        // --- End Handling SuperVision Result ---
+      } else {
+        debugPrint('[HomeScreen] Processing Direct feature result...');
+        final String? receivedForFeatureId = _lastRequestedFeatureId;
+
+        if (receivedForFeatureId == null) {
+          debugPrint(
+              '[HomeScreen] Received direct result, but _lastRequestedFeatureId is null. Ignoring.');
+          if (actualFeatureId != null) {
+            debugPrint(
+                '[HomeScreen] Backend provided feature_id: $actualFeatureId for potentially direct request.');
+          }
+          return;
+        }
+
+        _lastRequestedFeatureId = null;
+
         debugPrint(
-            '[HomeScreen] Received result, but _lastRequestedFeatureId is null. Ignoring.');
-        return;
+            '[HomeScreen] Received direct result for "$receivedForFeatureId": "$resultTextRaw"');
+
+        _processFeatureResult(receivedForFeatureId, resultTextRaw,
+            rawDetectionsForHazards, false);
+        // --- End Handling Direct Result ---
       }
-
-      _lastRequestedFeatureId = null; // Clear ID after using it
-
-      debugPrint(
-          '[HomeScreen] Received result for "$receivedForFeatureId": "$resultTextRaw"');
-
-      // Process based on the feature that requested it
-      _processFeatureResult(
-          receivedForFeatureId, resultTextRaw, rawDetectionsForHazards);
     } else {
-      debugPrint('[HomeScreen] Received non-result/event data: $data');
+      debugPrint('[HomeScreen] Received non-result data: $data');
     }
   }
 
-  void _processFeatureResult(
-      String featureId, String resultTextRaw, String rawDetectionsForHazards) {
+  void _processFeatureResult(String featureId, String resultTextRaw,
+      String rawDetectionsForHazards, bool isForSupervision) {
+    if (isForSupervision) {
+      debugPrint(
+          "[ERROR] _processFeatureResult called unexpectedly for a SuperVision result.");
+      return;
+    }
+    debugPrint("[HomeScreen] Updating state for dedicated page: $featureId");
+
     setState(() {
       bool speakResult = false;
       String textToSpeak = "";
       String displayResult = "";
 
-      // Hazard Check (Always uses raw data if applicable)
-      if (
-          // featureId == objectDetectionFeature.id ||
+      if (featureId == objectDetectionFeature.id ||
           featureId == hazardDetectionFeature.id) {
         _processHazardDetection(rawDetectionsForHazards);
       }
 
-      // Update specific feature state
       if (featureId == objectDetectionFeature.id) {
         final odResult = _processObjectDetection(rawDetectionsForHazards);
         displayResult = odResult['display'];
@@ -509,7 +624,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         textToSpeak = odResult['speakText'];
         _lastObjectResult = displayResult;
       } else if (featureId == hazardDetectionFeature.id) {
-        // Display handled by hazard state
+        // Display handled by global hazard state
       } else if (featureId == sceneDetectionFeature.id) {
         final sceneResult = _processSceneDetection(resultTextRaw);
         displayResult = sceneResult['display'];
@@ -524,10 +639,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         _lastSceneTextResult = displayResult;
       } else {
         debugPrint(
-            "[HomeScreen] Received result for UNKNOWN feature ID: $featureId.");
+            "[HomeScreen] Direct result received for UNKNOWN feature ID: $featureId.");
       }
 
-      // Speak result if needed (excluding hazards)
+      // Speak result if needed (only for individual pages)
       if (speakResult &&
           _ttsInitialized &&
           featureId != hazardDetectionFeature.id) {
@@ -536,8 +651,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
   }
 
-  void _processHazardDetection(String rawDetections) {
-    _lastHazardRawResult = rawDetections;
+  String _processHazardDetection(String rawDetections) {
+    // _lastHazardRawResult = rawDetections;
     String specificHazardFound = "";
     bool hazardFoundInFrame = false;
 
@@ -557,6 +672,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (hazardFoundInFrame) {
       _triggerHazardAlert(specificHazardFound);
     }
+    return specificHazardFound;
   }
 
   Map<String, dynamic> _processObjectDetection(String rawDetections) {
@@ -864,9 +980,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _performManualDetection(String featureId) async {
+    if (featureId == barcodeScannerFeature.id) return;
+
+    if (featureId == supervisionFeature.id) {
+      await _performSuperVisionLlmAnalysis();
+      return;
+    }
+
     if (featureId == objectDetectionFeature.id ||
-        featureId == hazardDetectionFeature.id ||
-        featureId == barcodeScannerFeature.id) return;
+        featureId == hazardDetectionFeature.id) return;
     debugPrint('Manual detection triggered for feature: $featureId');
     if (!_cameraControllerCheck(showError: true)) {
       debugPrint('Manual detection aborted: Camera check failed.');
@@ -874,12 +996,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
     if (_isProcessingImage || !_webSocketService.isConnected) {
       debugPrint('Manual detection aborted: Processing or WS disconnected.');
+      _showStatusMessage("Processing or disconnected",
+          isError: true, durationSeconds: 2);
       return;
     }
 
     try {
       _isProcessingImage = true;
       _lastRequestedFeatureId = featureId;
+      if (mounted) setState(() {});
       if (_ttsInitialized) _ttsService.stop();
       _showStatusMessage("Capturing...", durationSeconds: 1);
       final XFile imageFile = await _cameraController!.takePicture();
@@ -895,7 +1020,63 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _handleCaptureError(e, stackTrace, featureId);
       _lastRequestedFeatureId = null; // Reset on error
     } finally {
-      if (mounted) setState(() => _isProcessingImage = false); // Reset flag
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) setState(() => _isProcessingImage = false); // Reset flag
+      });
+    }
+  }
+
+  Future<void> _performSuperVisionLlmAnalysis() async {
+    debugPrint('SuperVision LLM analysis triggered.');
+    if (!_cameraControllerCheck(showError: true)) {
+      debugPrint('SuperVision LLM aborted: Camera check failed.');
+      return;
+    }
+    // Use _isProcessingImage OR _isSupervisionProcessing to prevent overlaps
+    if (_isProcessingImage ||
+        _isSupervisionProcessing ||
+        !_webSocketService.isConnected) {
+      debugPrint(
+          'SuperVision LLM aborted: Already processing or WS disconnected.');
+      _showStatusMessage("Already processing or disconnected",
+          isError: true, durationSeconds: 2);
+      return;
+    }
+
+    if (_ttsInitialized) _ttsService.stop();
+
+    if (mounted) {
+      setState(() {
+        _isSupervisionProcessing = true;
+        _supervisionResultType = null;
+        _supervisionDisplayResult = "";
+        _supervisionHazardName = "";
+        _supervisionIsHazardActive = false;
+      });
+    }
+
+    try {
+      // Indicate processing specific to SuperVision
+      _isSupervisionProcessing = true;
+
+      _showStatusMessage("Capturing for SuperVision...", durationSeconds: 1);
+      final XFile imageFile = await _cameraController!.takePicture();
+      _showStatusMessage("Smart analyzing...", durationSeconds: 2);
+
+      // --- Send image for LLM Routing ---
+      _webSocketService.sendImageForProcessing(imageFile, supervisionFeature.id,
+          requestType: 'llm_route');
+    } catch (e, stackTrace) {
+      _handleCaptureError(e, stackTrace, supervisionFeature.id);
+      if (mounted) {
+        setState(() {
+          _isSupervisionProcessing = false;
+          _supervisionResultType = null;
+          _supervisionDisplayResult = "Capture Error";
+          _supervisionHazardName = "";
+          _supervisionIsHazardActive = false;
+        });
+      }
     }
   }
 
@@ -921,7 +1102,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           showError) {
         debugPrint(
             "Triggering re-initialization from _cameraControllerCheck (Manual Trigger)");
-        _initializeMainCameraController(); // Trigger init
+        _initializeMainCameraController();
       }
       return false;
     }
@@ -949,9 +1130,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           _lastHazardRawResult = "";
           _clearHazardAlert();
           _hazardAlertClearTimer?.cancel();
-        } else if (featureId != null && featureId != barcodeScannerFeature.id) {
+        } else if (featureId != null &&
+            featureId != barcodeScannerFeature.id &&
+            featureId != supervisionFeature.id) {
           _lastSceneTextResult = "Error";
         }
+        if (featureId == supervisionFeature.id) {
+          _isSupervisionProcessing = false;
+          _supervisionResultType = null;
+          _supervisionDisplayResult = errorMsg;
+          _supervisionHazardName = "";
+          _supervisionIsHazardActive = false;
+        }
+        _isProcessingImage = false;
+        _lastRequestedFeatureId = null;
       });
       _showStatusMessage(errorMsg, isError: true, durationSeconds: 4);
     }
@@ -966,6 +1158,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       setState(() {
         _isHazardAlertActive = true;
         _currentDisplayedHazardName = hazardName;
+        _supervisionHazardName = hazardName;
+        _supervisionIsHazardActive = true;
       });
     }
 
@@ -985,6 +1179,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       setState(() {
         _isHazardAlertActive = false;
         _currentDisplayedHazardName = "";
+        _supervisionIsHazardActive = true;
       });
       debugPrint("[ALERT] Hazard alert display cleared by timer.");
     }
@@ -1110,17 +1305,39 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (previousPageIndex >= _features.length ||
         previousPageIndex == newPageIndex) return;
 
+    if (previousPageIndex < 0 ||
+        previousPageIndex >= _features.length ||
+        newPageIndex < 0 ||
+        newPageIndex >= _features.length) {
+      debugPrint(
+          "[HomeScreen _onPageChanged] ERROR: Invalid page index detected. Previous: $previousPageIndex, New: $newPageIndex, Features Count: ${_features.length}");
+      return;
+    }
+
     final previousFeature = _features[previousPageIndex];
     final newFeature = _features[newPageIndex];
     debugPrint(
-        "Page changed from ${previousFeature.title} to ${newFeature.title}");
+        "Page changed from ${previousFeature.title} (${previousFeature.id}) to ${newFeature.title} (${newFeature.id})");
+
+    debugPrint(
+        "[HomeScreen _onPageChanged] Transitioning FROM: Index=$previousPageIndex, ID='${previousFeature.id}', Title='${previousFeature.title}'");
+    debugPrint(
+        "[HomeScreen _onPageChanged] Transitioning TO:   Index=$newPageIndex, ID='${newFeature.id}', Title='${newFeature.title}'");
+    debugPrint(
+        "[HomeScreen _onPageChanged] Comparing previous ID ('${previousFeature.id}') with SuperVision ID ('${supervisionFeature.id}')");
 
     if (_ttsInitialized) _ttsService.stop(); // Stop any ongoing speech
     _stopDetectionTimer();
 
     bool isSwitchingFromBarcode =
         previousFeature.id == barcodeScannerFeature.id;
+
     bool isSwitchingToBarcode = newFeature.id == barcodeScannerFeature.id;
+
+    bool isSwitchingFromSuperVision =
+        previousFeature.id == supervisionFeature.id;
+    debugPrint(
+        "[HomeScreen _onPageChanged] Result of (previousFeature.id == supervisionFeature.id): $isSwitchingFromSuperVision");
 
     // Update page index state FIRST
     if (mounted) {
@@ -1139,27 +1356,41 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     } else if (isSwitchingFromBarcode) {
       debugPrint("Switching FROM barcode page - initializing main camera...");
       await _initializeMainCameraController(); // Await completion
-      setState(() {});
-      _buildCameraDisplay(false); // This might be redundant, state will update
+      // setState(() {});
+      _buildCameraDisplay(false);
       debugPrint(
           "Main camera initialization attempt completed in onPageChanged.");
-      // Force final UI update after init completes when coming from barcode
       if (mounted) setState(() {});
     }
 
     // Clear previous page results AFTER camera ops (if any) are done
     if (mounted) {
+      debugPrint(
+          "[HomeScreen _onPageChanged] Entering final setState to clear results. isSwitchingFromSuperVision = $isSwitchingFromSuperVision");
       setState(() {
         _isProcessingImage = false;
         _lastRequestedFeatureId = null;
         if (previousFeature.id == objectDetectionFeature.id) {
           _lastObjectResult = "";
         } else if (previousFeature.id == hazardDetectionFeature.id) {
-          _hazardAlertClearTimer?.cancel();
-          _clearHazardAlert();
+          // _hazardAlertClearTimer?.cancel();
+          // _clearHazardAlert();
           _lastHazardRawResult = "";
         } else if (previousFeature.id != barcodeScannerFeature.id) {
           _lastSceneTextResult = "";
+        } else if (previousFeature.id == sceneDetectionFeature.id ||
+            previousFeature.id == textDetectionFeature.id) {
+          _lastSceneTextResult = "";
+        } else if (isSwitchingFromSuperVision) {
+          debugPrint("[HomeScreen] *** Clearing SuperVision state NOW! ***");
+          _isSupervisionProcessing = false;
+          _supervisionResultType = null;
+          _supervisionDisplayResult = "";
+          _supervisionHazardName = "";
+          _supervisionIsHazardActive = false;
+        } else if (previousFeature.id != barcodeScannerFeature.id) {
+          debugPrint(
+              "[HomeScreen] No specific state cleared for previous page ID: '${previousFeature.id}'");
         }
       });
     } else {
@@ -1303,6 +1534,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           return SceneDetectionPage(detectionResult: _lastSceneTextResult);
         } else if (feature.id == textDetectionFeature.id) {
           return TextDetectionPage(detectionResult: _lastSceneTextResult);
+        } else if (feature.id == supervisionFeature.id) {
+          return SuperVisionPage(
+            key: const ValueKey('supervision'),
+            isLoading: _isSupervisionProcessing,
+            resultType: _supervisionResultType,
+            displayResult: _supervisionDisplayResult,
+            hazardName: _supervisionHazardName,
+            isHazardActive: _supervisionIsHazardActive,
+          );
         } else {
           return Center(
               child: Text('Unknown Page: ${feature.id}',
@@ -1337,15 +1577,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildMainActionButton(FeatureConfig currentFeature) {
-    final bool isRealtimePage =
-        currentFeature.id == objectDetectionFeature.id ||
-            currentFeature.id == hazardDetectionFeature.id;
-    final bool isBarcodePage = currentFeature.id == barcodeScannerFeature.id;
+    final bool enableTap = currentFeature.id == sceneDetectionFeature.id ||
+        currentFeature.id == textDetectionFeature.id ||
+        currentFeature.id == supervisionFeature.id;
 
     return ActionButton(
-      onTap: (isRealtimePage || isBarcodePage)
-          ? null
-          : () => _performManualDetection(currentFeature.id),
+      onTap:
+          enableTap ? () => _performManualDetection(currentFeature.id) : null,
       onLongPress: () {
         if (!_speechEnabled) {
           _showStatusMessage('Speech not available', isError: true);

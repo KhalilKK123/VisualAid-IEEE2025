@@ -3,6 +3,9 @@
 import os
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"  # Keep if needed
+SAVE_OCR_IMAGES = False  # Set to True to enable saving
+OCR_IMAGE_SAVE_DIR = "ocr_debug_images"
+
 
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
@@ -23,10 +26,25 @@ import time
 import sys
 from ultralytics import YOLO  # Using YOLO from ultralytics for YOLO-World
 
+
+# --- Ollama Configuration ---
+OLLAMA_MODEL_NAME = os.environ.get("OLLAMA_MODEL", "gemma3:12b")
+OLLAMA_API_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434/api/generate")
+OLLAMA_REQUEST_TIMEOUT = 60  # Seconds for Ollama request timeout
+
+logger = logging.getLogger(__name__)  # Get logger instance early
+
+logger.info(
+    f"Ollama Configuration: Model='{OLLAMA_MODEL_NAME}', URL='{OLLAMA_API_URL}'"
+)
+
+
+if SAVE_OCR_IMAGES and not os.path.exists(OCR_IMAGE_SAVE_DIR):
+    os.makedirs(OCR_IMAGE_SAVE_DIR)
+
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
-logger = logging.getLogger(__name__)
 
 template_dir = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "templates")
@@ -45,15 +63,31 @@ socketio = SocketIO(
 try:
     # Set path explicitly if needed (examples commented out)
     # pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe' # Windows
-    # pytesseract.pytesseract.tesseract_cmd = r'/opt/homebrew/bin/tesseract' # macOS Apple Silicon
+    # Check if running inside Docker or specific environment
+    if os.path.exists("/usr/bin/tesseract"):
+        pytesseract.pytesseract.tesseract_cmd = (
+            r"/usr/bin/tesseract"  # Common Linux path
+        )
+        logger.info("Using Tesseract path: /usr/bin/tesseract")
+    elif os.path.exists("/home/linuxbrew/.linuxbrew/opt/tesseract/bin/tesseract"):
+        pytesseract.pytesseract.tesseract_cmd = (
+            r"/home/linuxbrew/.linuxbrew/opt/tesseract/bin/tesseract"  # macOS Brew
+        )
+        logger.info(
+            "Using Tesseract path: /home/linuxbrew/.linuxbrew/opt/tesseract/bin/tesseract"
+        )
+    # Add more checks if needed (e.g., for Windows default path)
+    # else:
+    #    logger.warning("Tesseract path not explicitly set, relying on PATH.")
+
     tesseract_version = pytesseract.get_tesseract_version()
-    logger.info(
-        f"Tesseract OCR Engine found automatically. Version: {tesseract_version}"
-    )
+    logger.info(f"Tesseract OCR Engine Version: {tesseract_version}")
 except pytesseract.TesseractNotFoundError:
     logger.error(
-        "TesseractNotFoundError: Tesseract is not installed or not in your PATH."
+        "TesseractNotFoundError: Tesseract is not installed or not in your PATH/configured path."
     )
+    # Optionally exit or disable OCR features if Tesseract is critical
+    # sys.exit("Tesseract not found. Exiting.")
 except Exception as e:
     logger.error(f"Error configuring Tesseract path or getting version: {e}")
 
@@ -117,7 +151,7 @@ try:
     logger.info(f"YOLO-World model loaded from {yolo_model_path}.")
 
     # --- !!! IMPORTANT: Define the target classes for YOLO-World !!! ---
-    # This list MUST contain all object types you want the model to potentially identify.
+    # (Keep your existing TARGET_CLASSES list)
     TARGET_CLASSES = [
         # --- Standard COCO Classes ---
         "person",
@@ -449,28 +483,38 @@ try:
         logger.warning("Using fallback Places365 labels.")
 
     # --- Tesseract Supported Languages ---
-    SUPPORTED_OCR_LANGS = {
-        "eng",
-        "ara",
-        "fas",
-        "urd",
-        "uig",
-        "hin",
-        "mar",
-        "nep",
-        "rus",
-        "chi_sim",
-        "chi_tra",
-        "jpn",
-        "kor",
-        "tel",
-        "kan",
-        "ben",
-    }
+    try:
+        installed_langs = pytesseract.get_languages(config="")
+        SUPPORTED_OCR_LANGS = set(installed_langs)
+        logger.info(f"Dynamically detected Tesseract languages: {SUPPORTED_OCR_LANGS}")
+    except Exception as e:
+        logger.warning(
+            f"Could not dynamically get Tesseract languages ({e}). Using predefined list."
+        )
+        SUPPORTED_OCR_LANGS = {
+            "eng",
+            "ara",
+            "fas",
+            "urd",
+            "uig",
+            "hin",
+            "mar",
+            "nep",
+            "rus",
+            "chi_sim",
+            "chi_tra",
+            "jpn",
+            "kor",
+            "tel",
+            "kan",
+            "ben",
+        }
     DEFAULT_OCR_LANG = "eng"
-    logger.info(
-        f"Tesseract OCR configured. Supported languages (if installed): {SUPPORTED_OCR_LANGS}"
-    )
+    if DEFAULT_OCR_LANG not in SUPPORTED_OCR_LANGS:
+        logger.warning(
+            f"Default OCR Lang '{DEFAULT_OCR_LANG}' not in detected/defined list {SUPPORTED_OCR_LANGS}. OCR might fail."
+        )
+
     logger.info(f"Default Tesseract OCR language: {DEFAULT_OCR_LANG}")
 
     # --- Image Transforms for Scene Classification ---
@@ -488,6 +532,9 @@ try:
 except SystemExit as se:
     logger.critical(str(se))
     sys.exit(1)
+except FileNotFoundError as fnf_e:
+    logger.critical(f"Required model file not found: {fnf_e}", exc_info=False)
+    sys.exit(f"Missing file: {fnf_e}")
 except Exception as e:
     logger.critical(f"FATAL ERROR DURING MODEL LOADING: {e}", exc_info=True)
     sys.exit(f"Failed model load: {e}")
@@ -571,23 +618,45 @@ def detect_objects(image_np):
 def detect_scene(image_np):
     """Classifies the scene using Places365 model."""
     try:
-        img_rgb = cv2.cvtColor(image_np, cv2.COLOR_BGR2RGB)
+        # Ensure image is RGB
+        if image_np.shape[2] == 3:
+            img_rgb = cv2.cvtColor(image_np, cv2.COLOR_BGR2RGB)
+        else:
+            logger.warning(
+                "Input image for scene detection was not BGR, attempting conversion."
+            )
+            img_rgb = cv2.cvtColor(
+                image_np,
+                cv2.COLOR_GRAY2RGB if len(image_np.shape) == 2 else cv2.COLOR_BGRA2RGB,
+            )
+
         img_pil = Image.fromarray(img_rgb)
         img_tensor = scene_transform(img_pil).unsqueeze(0)
+
+        # Move tensor to the same device as the model
+        device = next(places_model.parameters()).device
+        img_tensor = img_tensor.to(device)
+
         with torch.no_grad():
             outputs = places_model(img_tensor)
             probabilities = torch.softmax(outputs, dim=1)[0]
             top_prob, top_catid = torch.max(probabilities, 0)
-            if top_catid.item() < len(places_labels):
-                predicted_label = places_labels[top_catid.item()]
+
+            predicted_index = top_catid.item()
+            if 0 <= predicted_index < len(places_labels):
+                predicted_label = places_labels[predicted_index].replace(
+                    "_", " "
+                )  # Replace underscores
                 confidence = top_prob.item()
-                result_str = f"{predicted_label}"
+                result_str = f"{predicted_label}"  # Just return label name
                 logger.debug(
                     f"Scene detection complete: {predicted_label} (Conf: {confidence:.3f})"
                 )
                 return result_str
             else:
-                logger.warning(f"Places365 ID {top_catid.item()} out of bounds.")
+                logger.warning(
+                    f"Places365 predicted index {predicted_index} out of bounds (0-{len(places_labels)-1})."
+                )
                 return "Unknown Scene"
     except Exception as e:
         logger.error(f"Error during scene detection: {e}", exc_info=True)
@@ -597,67 +666,237 @@ def detect_scene(image_np):
 def detect_text(image_np, language_code=DEFAULT_OCR_LANG):
     """Performs OCR using Tesseract."""
     logger.debug(f"Starting Tesseract OCR for lang: '{language_code}'...")
-    validated_lang = (
-        language_code if language_code in SUPPORTED_OCR_LANGS else DEFAULT_OCR_LANG
-    )
-    if validated_lang != language_code:
+
+    # Validate language against actually available ones
+    validated_lang = language_code
+    if language_code not in SUPPORTED_OCR_LANGS:
         logger.warning(
-            f"Lang '{language_code}' invalid/unsupported, using '{DEFAULT_OCR_LANG}'."
+            f"Requested lang '{language_code}' not in supported list {SUPPORTED_OCR_LANGS}. Falling back to '{DEFAULT_OCR_LANG}'."
         )
+        validated_lang = DEFAULT_OCR_LANG
+        # Double-check if even the default is available
+        if validated_lang not in SUPPORTED_OCR_LANGS:
+            logger.error(
+                f"Default language '{DEFAULT_OCR_LANG}' is also not available. OCR cannot proceed."
+            )
+            return "Error: OCR Language Not Available"
+
+    if SAVE_OCR_IMAGES:
+        try:
+            timestamp = time.strftime("%Y%m%d-%H%M%S")
+            filename = os.path.join(
+                OCR_IMAGE_SAVE_DIR,
+                f"ocr_input_{timestamp}_{validated_lang}.png",  # Use validated lang in filename
+            )
+            # Ensure image is savable (e.g., BGR)
+            save_img = image_np
+            if len(image_np.shape) == 3 and image_np.shape[2] == 4:  # BGRA
+                save_img = cv2.cvtColor(image_np, cv2.COLOR_BGRA2BGR)
+            elif len(image_np.shape) == 2:  # Grayscale
+                save_img = cv2.cvtColor(image_np, cv2.COLOR_GRAY2BGR)
+
+            cv2.imwrite(filename, save_img)
+            logger.debug(f"Saved OCR input image to: {filename}")
+        except Exception as save_e:
+            logger.error(f"Failed to save debug OCR image: {save_e}")
+
     try:
-        img_rgb = cv2.cvtColor(image_np, cv2.COLOR_BGR2RGB)
-        img_pil = Image.fromarray(img_rgb)
-        detected_text = pytesseract.image_to_string(img_pil, lang=validated_lang)
+        # Tesseract generally works better with grayscale images
+        if len(image_np.shape) == 3:
+            gray_img = cv2.cvtColor(image_np, cv2.COLOR_BGR2GRAY)
+        else:
+            gray_img = image_np  # Assume it's already grayscale if not 3 channels
+
+        # Optional: Apply some basic preprocessing for potentially better OCR
+        # gray_img = cv2.threshold(gray_img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+        # gray_img = cv2.medianBlur(gray_img, 3)
+
+        img_pil = Image.fromarray(gray_img)  # Use grayscale PIL image
+
+        # Specify OEM and PSM modes if needed, e.g., '--oem 3 --psm 6'
+        custom_config = f"-l {validated_lang} --oem 3 --psm 6"
+        logger.debug(f"Using Tesseract config: {custom_config}")
+        detected_text = pytesseract.image_to_string(img_pil, config=custom_config)
+
         result_str = detected_text.strip()
         if not result_str:
             logger.debug(f"Tesseract ({validated_lang}): No text found.")
             return "No text detected"
         else:
+            # Clean up common OCR noise (e.g., excessive newlines/spaces)
+            result_str = "\n".join(
+                [line.strip() for line in result_str.splitlines() if line.strip()]
+            )
             log_text = result_str.replace("\n", " ").replace("\r", "")[:100]
             logger.debug(f"Tesseract ({validated_lang}) OK: Found '{log_text}...'")
             return result_str
     except pytesseract.TesseractNotFoundError:
-        logger.error("Tesseract executable not found.")
+        logger.error("Tesseract executable not found at configured path or in PATH.")
         return "Error: OCR Engine Not Found"
     except pytesseract.TesseractError as tess_e:
         logger.error(f"TesseractError ({validated_lang}): {tess_e}", exc_info=False)
         error_str = str(tess_e).lower()
+        # Check for specific error messages indicating missing language data
         if (
             "failed loading language" in error_str
             or "could not initialize tesseract" in error_str
+            or "data file not found" in error_str
+            or f"load_system_dawg" in error_str  # Sometimes related to lang data
         ):
-            logger.warning(
-                f"Missing lang pack for '{validated_lang}'? Install tesseract-ocr-{validated_lang}."
+            logger.error(
+                f"Missing Tesseract language data for '{validated_lang}'. Install the necessary package (e.g., tesseract-ocr-{validated_lang} on Debian/Ubuntu, or equivalent)."
             )
-            if validated_lang != DEFAULT_OCR_LANG:
-                logger.warning(f"Attempting fallback OCR with '{DEFAULT_OCR_LANG}'...")
-                try:
-                    img_rgb_fallback = cv2.cvtColor(image_np, cv2.COLOR_BGR2RGB)
-                    img_pil_fallback = Image.fromarray(img_rgb_fallback)
-                    fallback_text = pytesseract.image_to_string(
-                        img_pil_fallback, lang=DEFAULT_OCR_LANG
-                    )
-                    fallback_result = fallback_text.strip()
-                    if not fallback_result:
-                        return "No text detected (fallback)"
-                    else:
-                        log_fallback_text = fallback_result.replace("\n", " ").replace(
-                            "\r", ""
-                        )[:100]
-                        logger.debug(
-                            f"Tesseract fallback ({DEFAULT_OCR_LANG}) OK: '{log_fallback_text}...'"
-                        )
-                        return fallback_result
-                except Exception as fallback_e:
-                    logger.error(f"Fallback OCR error: {fallback_e}")
-                    return "Error during OCR fallback"
-            else:
-                return f"Error: OCR failed for '{validated_lang}'"
+            # Don't automatically fallback here, as the fundamental issue is missing data pack.
+            return f"Error: Missing OCR language data for '{validated_lang}'"
         else:
+            # General Tesseract error
             return f"Error during text detection ({validated_lang})"
     except Exception as e:
         logger.error(f"Unexpected OCR error ({validated_lang}): {e}", exc_info=True)
         return f"Error during text detection ({validated_lang})"
+
+
+# --- Helper Function for Ollama Interaction ---
+def get_llm_feature_choice(image_np, client_sid="Unknown"):
+    """
+    Sends image to Ollama multimodal model and asks it to choose a feature.
+
+    Args:
+        image_np (numpy.ndarray): The input image (BGR format from OpenCV).
+        client_sid (str): Identifier for logging.
+
+    Returns:
+        str: The chosen feature ID ('object_detection', 'scene_detection', 'text_detection')
+             or None if failed.
+    """
+    logger.info(
+        f"[{client_sid}] Requesting feature choice from Ollama ({OLLAMA_MODEL_NAME})..."
+    )
+    start_time = time.time()
+
+    try:
+        # 1. Encode image to Base64
+        # Convert BGR numpy array back to image bytes (e.g., JPEG) then base64 encode
+        is_success, buffer = cv2.imencode(".jpg", image_np)
+        if not is_success:
+            logger.error(f"[{client_sid}] Failed to encode image to JPEG for Ollama.")
+            return None
+        image_bytes = buffer.tobytes()
+        image_base64 = base64.b64encode(image_bytes).decode("utf-8")
+
+        # 2. Construct the prompt
+        # Prompt asks the LLM to choose *only* the most relevant function ID
+        prompt = (
+            "Analyze the provided image. Based *only* on the main content, "
+            "which of the following analysis types is MOST appropriate? "
+            "Choose exactly ONE:\n"
+            "- 'object_detection': If the image focuses on identifying specific items or objects.\n"
+            "- 'hazard_detection': If the image focuses on identifying potentially hazardous or dangerous items or objects for a vision impaired person. For example, a stop sign. \n"
+            "- 'scene_detection': If the image primarily shows an overall environment, location, or setting.\n"
+            "- 'text_detection': If the image contains significant readable text (like a document, sign, or label).\n"
+            "Respond with ONLY the chosen identifier string (e.g., 'scene_detection') and nothing else."
+        )
+
+        # 3. Prepare the request payload for Ollama /api/generate
+        payload = {
+            "model": OLLAMA_MODEL_NAME,
+            "prompt": prompt,
+            "images": [image_base64],
+            "stream": False,  # Get the full response at once
+            # Options can fine-tune behavior (e.g., temperature=0.3 for more deterministic choice)
+            "options": {"temperature": 0.3},
+        }
+
+        # 4. Send the request to Ollama
+        logger.debug(f"[{client_sid}] Sending request to Ollama: {OLLAMA_API_URL}")
+        response = requests.post(
+            OLLAMA_API_URL,
+            json=payload,
+            headers={"Content-Type": "application/json"},
+            timeout=OLLAMA_REQUEST_TIMEOUT,
+        )
+        response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
+
+        # 5. Process the response
+        response_data = response.json()
+        llm_response_text = response_data.get("response", "").strip().lower()
+        logger.debug(f"[{client_sid}] Raw response from Ollama: '{llm_response_text}'")
+
+        # 6. Extract the choice (be robust)
+        chosen_feature = None
+        valid_features = [
+            "object_detection",
+            "hazard_detection",
+            "scene_detection",
+            "text_detection",
+        ]
+
+        # Try direct match first (ideal case)
+        if llm_response_text in valid_features:
+            chosen_feature = llm_response_text
+        else:
+            # If LLM added extra text, try finding the keyword
+            logger.warning(
+                f"[{client_sid}] Ollama response wasn't an exact feature ID ('{llm_response_text}'). Searching for keywords."
+            )
+            for feature in valid_features:
+                if f"'{feature}'" in llm_response_text or feature in llm_response_text:
+                    # Basic check if it contains the feature name, might need refinement
+                    # Example: If response is "I choose 'scene_detection'.", this should find it.
+                    # Be careful not to misinterpret, e.g. if it says "don't use object_detection"
+                    # A more robust approach might involve asking the LLM to format as JSON.
+                    if chosen_feature is None:  # Take the first match found
+                        chosen_feature = feature
+                        logger.info(
+                            f"[{client_sid}] Found keyword '{feature}' in Ollama response."
+                        )
+                    else:
+                        logger.warning(
+                            f"[{client_sid}] Found multiple keywords in Ollama response. Using first match: '{chosen_feature}'. Full response: '{llm_response_text}'"
+                        )
+                        break  # Stop after finding the first conflicting match
+
+        if chosen_feature:
+            elapsed_time = time.time() - start_time
+            logger.info(
+                f"[{client_sid}] Ollama chose feature: '{chosen_feature}' in {elapsed_time:.2f}s."
+            )
+            return chosen_feature
+        else:
+            logger.error(
+                f"[{client_sid}] Failed to extract a valid feature choice from Ollama response: '{llm_response_text}'"
+            )
+            return None
+
+    except requests.exceptions.Timeout:
+        logger.error(
+            f"[{client_sid}] Ollama request timed out after {OLLAMA_REQUEST_TIMEOUT} seconds."
+        )
+        return None
+    except requests.exceptions.ConnectionError:
+        logger.error(
+            f"[{client_sid}] Could not connect to Ollama at {OLLAMA_API_URL}. Is Ollama running?"
+        )
+        return None
+    except requests.exceptions.RequestException as req_e:
+        logger.error(
+            f"[{client_sid}] Error during Ollama API request: {req_e}", exc_info=True
+        )
+        # Log response body if available and indicates an error
+        if req_e.response is not None:
+            try:
+                logger.error(
+                    f"[{client_sid}] Ollama response body (error): {req_e.response.text}"
+                )
+            except Exception:
+                pass  # Ignore errors reading the error response body
+        return None
+    except Exception as e:
+        logger.error(
+            f"[{client_sid}] Unexpected error during Ollama interaction: {e}",
+            exc_info=True,
+        )
+        return None
 
 
 # --- WebSocket Handlers ---
@@ -680,48 +919,41 @@ def handle_message(data):
     client_sid = request.sid
     start_time = time.time()
     detection_type = "unknown"
+    request_type_from_payload = None
+    final_response = None
+
     try:
         if not isinstance(data, dict):
-            logger.warning(f"Invalid data format from {client_sid}.")
+            logger.warning(f"Invalid data format from {client_sid}. Expected dict.")
             emit("response", {"result": "Error: Invalid data format"})
             return
+
         image_data = data.get("image")
-        detection_type = data.get("type")
-        requested_language = DEFAULT_OCR_LANG
-        if detection_type == "text_detection":
-            requested_language_from_payload = data.get(
-                "language", DEFAULT_OCR_LANG
-            ).lower()
-            if requested_language_from_payload not in SUPPORTED_OCR_LANGS:
-                logger.warning(
-                    f"Client {client_sid} invalid lang '{requested_language_from_payload}', using '{DEFAULT_OCR_LANG}'."
-                )
-                requested_language = DEFAULT_OCR_LANG
-            else:
-                requested_language = requested_language_from_payload
+        detection_type = data.get("type")  # e.g., 'object_detection', 'supervision'
+        request_type_from_payload = data.get("request_type")  # e.g., 'llm_route'
+
         if not image_data or not detection_type:
             logger.warning(f"Missing 'image' or 'type' from {client_sid}.")
             emit("response", {"result": "Error: Missing 'image' or 'type'"})
             return
-        logger.info(
-            f"Processing '{detection_type}' from {client_sid}"
-            + (
-                f", Lang: '{requested_language}'"
-                if detection_type == "text_detection"
-                else ""
-            )
-        )
-        try:  # Image Decoding
-            if "," in image_data:
-                _, encoded = image_data.split(",", 1)
+
+        # --- Image Decoding ---
+        try:
+            if image_data.startswith("data:image"):
+                header, encoded = image_data.split(",", 1)
             else:
-                encoded = image_data
+                encoded = image_data  # Assume raw base64 if no header
             image_bytes = base64.b64decode(encoded)
             image_np = cv2.imdecode(
-                np.frombuffer(image_bytes, np.uint8), cv2.IMREAD_COLOR
+                np.frombuffer(image_bytes, np.uint8), cv2.IMREAD_COLOR  # Load as BGR
             )
             if image_np is None:
-                raise ValueError("cv2.imdecode failed")
+                raise ValueError(
+                    "cv2.imdecode returned None. Invalid image data or format."
+                )
+            logger.debug(
+                f"[{client_sid}] Image decoded successfully. Shape: {image_np.shape}"
+            )
         except (base64.binascii.Error, ValueError) as decode_err:
             logger.error(f"Image decode error for {client_sid}: {decode_err}")
             emit("response", {"result": "Error: Invalid image data"})
@@ -733,115 +965,282 @@ def handle_message(data):
             )
             emit("response", {"result": "Error: Could not process image"})
             return
-        # Perform Detection
-        result = "Error: Unknown processing error"
-        if detection_type == "object_detection":
-            result = detect_objects(image_np)  # Calls updated function
-        elif detection_type == "scene_detection":
-            result = detect_scene(image_np)
-        elif detection_type == "text_detection":
-            result = detect_text(image_np, language_code=requested_language)
+
+        # --- Routing Logic ---
+        if detection_type == "supervision" and request_type_from_payload == "llm_route":
+            logger.info(
+                f"Handling SuperVision LLM routing request from {client_sid}..."
+            )
+
+            # --- Call Ollama to choose the feature ---
+            chosen_feature_id = get_llm_feature_choice(image_np, client_sid)
+
+            if chosen_feature_id:
+                logger.info(
+                    f"[{client_sid}] Ollama selected feature: {chosen_feature_id}. Running detection..."
+                )
+                result_from_chosen_model = "Error: Feature execution failed"
+                try:
+                    if chosen_feature_id == "object_detection":
+                        result_from_chosen_model = detect_objects(image_np)
+                    elif chosen_feature_id == "hazard_detection":
+                        result_from_chosen_model = detect_objects(image_np)
+                    elif chosen_feature_id == "scene_detection":
+                        result_from_chosen_model = detect_scene(image_np)
+                    elif chosen_feature_id == "text_detection":
+                        # For LLM-chosen text detection, use default language initially.
+                        # Future: Could try to get lang hint from LLM too.
+                        result_from_chosen_model = detect_text(
+                            image_np, DEFAULT_OCR_LANG
+                        )
+                    else:
+                        # Should not happen if get_llm_feature_choice validates
+                        logger.error(
+                            f"[{client_sid}] Invalid feature '{chosen_feature_id}' returned by LLM function."
+                        )
+                        result_from_chosen_model = "Error: Invalid analysis type chosen"
+
+                    # Format response for SuperVision
+                    final_response = {
+                        "result": result_from_chosen_model,
+                        "feature_id": chosen_feature_id,
+                        "is_from_supervision_llm": True,
+                    }
+                except Exception as exec_e:
+                    logger.error(
+                        f"[{client_sid}] Error executing selected feature '{chosen_feature_id}': {exec_e}",
+                        exc_info=True,
+                    )
+                    final_response = {
+                        "result": f"Error running {chosen_feature_id}",
+                        "feature_id": chosen_feature_id,  # Still report what was attempted
+                        "is_from_supervision_llm": True,
+                    }
+            else:
+                # Ollama interaction failed (timeout, connection error, bad response etc.)
+                logger.error(
+                    f"[{client_sid}] Failed to get feature choice from Ollama."
+                )
+                final_response = {
+                    "result": "Error: Smart analysis failed (LLM unavailable or error)",
+                    "feature_id": "supervision_error",
+                    "is_from_supervision_llm": True,
+                }
+            # --- End Ollama Interaction ---
+
         else:
-            logger.warning(f"Unsupported type '{detection_type}' from {client_sid}")
-            result = f"Error: Unsupported type '{detection_type}'"
-        processing_time = time.time() - start_time
-        log_result = str(result).replace("\n", " ").replace("\r", "")[:150]
-        logger.info(
-            f"Completed '{detection_type}' for {client_sid} in {processing_time:.3f}s. Result: '{log_result}...'"
-            if len(str(result)) > 150
-            else f"Completed '{detection_type}' for {client_sid} in {processing_time:.3f}s. Result: '{log_result}'"
-        )
-        emit("response", {"result": result})
+            # --- Handle DIRECT feature requests (Object, Scene, Text) ---
+            logger.info(
+                f"Processing direct request '{detection_type}' from {client_sid}"
+            )
+            result = "Error: Unknown processing error"
+            requested_language = DEFAULT_OCR_LANG
+
+            if detection_type == "object_detection":
+                result = detect_objects(image_np)
+            elif detection_type == "scene_detection":
+                result = detect_scene(image_np)
+            elif detection_type == "text_detection":
+                requested_language_from_payload = data.get(
+                    "language", DEFAULT_OCR_LANG
+                ).lower()
+                # Validate requested language
+                if requested_language_from_payload not in SUPPORTED_OCR_LANGS:
+                    logger.warning(
+                        f"Client {client_sid} requested invalid/unsupported lang '{requested_language_from_payload}'. Using '{DEFAULT_OCR_LANG}'."
+                    )
+                    requested_language = DEFAULT_OCR_LANG
+                else:
+                    requested_language = requested_language_from_payload
+                logger.info(
+                    f"[{client_sid}] Processing Text Detection with lang: '{requested_language}'"
+                )
+                result = detect_text(image_np, language_code=requested_language)
+            # elif detection_type == "hazard_detection": # Example for future direct type
+            #     logger.warning(f"Hazard detection is not yet implemented as a direct function. Use SuperVision.")
+            #     result = "Error: Hazard detection unavailable directly"
+            else:
+                logger.warning(
+                    f"Unsupported direct type '{detection_type}' received from {client_sid}"
+                )
+                result = f"Error: Unsupported analysis type '{detection_type}'"
+
+            final_response = {
+                "result": result,
+                "feature_id": detection_type,
+                # Explicitly set to false for direct requests
+                "is_from_supervision_llm": False,
+            }
+
+        # --- Emit the final response ---
+        if final_response:
+            processing_time = time.time() - start_time
+            log_result = str(final_response.get("result", "N/A"))
+            log_result_short = (
+                (log_result[:150] + "...") if len(log_result) > 150 else log_result
+            )
+            log_type = final_response.get("feature_id", detection_type)
+            log_origin = (
+                "Supervision(LLM)"
+                if final_response.get("is_from_supervision_llm")
+                else "Direct"
+            )
+
+            logger.info(
+                f"Completed '{log_type}' ({log_origin}) for {client_sid} in {processing_time:.3f}s. Result: '{log_result_short}'"
+            )
+            emit("response", final_response)
+        else:
+            # This case should ideally be handled by error paths setting a final_response
+            logger.error(
+                f"[{client_sid}] Failed to generate a response object for type '{detection_type}'. This indicates a code flow error."
+            )
+            emit("response", {"result": "Server Error: Failed to process request."})
+
     except Exception as e:
         processing_time = time.time() - start_time
         logger.error(
-            f"Unhandled error processing '{detection_type}' for {client_sid} after {processing_time:.3f}s: {e}",
+            f"Unhandled error processing message (type: '{detection_type}') for {client_sid} after {processing_time:.3f}s: {e}",
             exc_info=True,
         )
         try:
-            emit("response", {"result": f"Server Error: Unexpected error."})
+            # Try to send a generic error
+            error_response = {"result": f"Server Error: An unexpected error occurred."}
+            # Try to mark it as supervision if context suggests it
+            if (
+                detection_type == "supervision"
+                and request_type_from_payload == "llm_route"
+            ):
+                error_response["feature_id"] = "supervision_error"
+                error_response["is_from_supervision_llm"] = True
+            else:
+                error_response["feature_id"] = (
+                    "general_error"  # Or use original detection_type
+                )
+                error_response["is_from_supervision_llm"] = False
+
+            emit("response", error_response)
         except Exception as emit_e:
-            logger.error(f"Failed to emit error response to {client_sid}: {emit_e}")
+            logger.error(
+                f"Failed to emit final error response to {client_sid}: {emit_e}"
+            )
 
 
-# --- Old Test page handlers (Reference Only) ---
-# Update these if you actively use test.html and need specific formats
+# --- Old Test page handlers (Keep empty or implement if test.html is used) ---
 @socketio.on("detect-objects")
 def handle_detect_objects_test(data):
+    logger.warning(
+        "Received 'detect-objects' event (likely from test.html) - handler not implemented."
+    )
     pass
 
 
 @socketio.on("detect-scene")
 def handle_detect_scene_test(data):
+    logger.warning(
+        "Received 'detect-scene' event (likely from test.html) - handler not implemented."
+    )
     pass
 
 
 @socketio.on("ocr")
 def handle_ocr_test(data):
+    logger.warning(
+        "Received 'ocr' event (likely from test.html) - handler not implemented."
+    )
     pass
 
 
 # --- Default SocketIO Error Handler ---
 @socketio.on_error_default
 def default_error_handler(e):
-    logger.error(f"Unhandled WebSocket Error: {e}", exc_info=True)
+    client_sid = request.sid if request else "Unknown"
+    logger.error(f"Unhandled WebSocket Error for SID {client_sid}: {e}", exc_info=True)
     try:
-        if request and request.sid:
+        if client_sid != "Unknown":
             emit(
                 "response",
-                {"result": f"Server Error: Internal WebSocket error."},
-                room=request.sid,
+                {
+                    "result": f"Server Error: Internal WebSocket error. Please reconnect or try again."
+                },
+                room=client_sid,
             )
     except Exception as emit_err:
-        logger.error(f"Failed emit default error response: {emit_err}")
+        logger.error(
+            f"Failed to emit default error response to {client_sid}: {emit_err}"
+        )
 
 
-# --- HTTP Routes (Keep as is) ---
+# --- HTTP Routes (Keep placeholders or implement fully) ---
 @app.route("/")
 def home():
+    # Point to the test page if it exists, otherwise simple message
     test_html_path = os.path.join(template_dir, "test.html")
     if os.path.exists(test_html_path):
+        logger.info("Serving test.html for root request.")
         return render_template("test.html")
     else:
-        return "VisionAid Backend is running."
+        logger.info("Serving basic status message for root request.")
+        return "VisionAid Backend is running. Connect via WebSocket."
 
 
+# --- Database Routes (Placeholders - Implement if needed) ---
 @app.route("/update_customization", methods=["POST"])
 def update_customization():
-    pass  # Keep existing implementation
+    logger.warning("Received request to unimplemented route: /update_customization")
+    return jsonify({"error": "Not implemented"}), 501
 
 
 @app.route("/get_user_info", methods=["GET"])
 def get_user_info():
-    pass  # Keep existing implementation
+    logger.warning("Received request to unimplemented route: /get_user_info")
+    return jsonify({"error": "Not implemented"}), 501
 
 
 @app.route("/add_test_user", methods=["POST"])
 def add_test_user():
-    pass  # Keep existing implementation
+    logger.warning("Received request to unimplemented route: /add_test_user")
+    return jsonify({"error": "Not implemented"}), 501
 
 
 # --- Main Execution Point ---
 if __name__ == "__main__":
-    logger.info("Starting Flask-SocketIO server...")
+    logger.info("Starting VisionAid Flask-SocketIO server...")
     host_ip = os.environ.get("FLASK_HOST", "0.0.0.0")
     port_num = int(os.environ.get("FLASK_PORT", 5000))
-    debug_mode = os.environ.get("FLASK_DEBUG", "True").lower() == "true"
+    debug_mode = os.environ.get("FLASK_DEBUG", "False").lower() in ("true", "1", "t")
     use_reloader = debug_mode
-    logger.info(
-        f"Server listening on {host_ip}:{port_num} (Debug: {debug_mode}, Reloader: {use_reloader})"
-    )
+
+    # Log effective settings
+    logger.info(f" * Environment: {'development' if debug_mode else 'production'}")
+    logger.info(f" * Debug Mode: {debug_mode}")
+    logger.info(f" * Reloader: {use_reloader}")
+    logger.info(f" * Running on: http://{host_ip}:{port_num}")
+    logger.info(f" * WebSocket transport: enabled")
+    logger.info(f" * Ollama Model: {OLLAMA_MODEL_NAME}")
+    logger.info(f" * Ollama URL: {OLLAMA_API_URL}")
+
     try:
         socketio.run(
             app,
-            debug=debug_mode,
             host=host_ip,
             port=port_num,
+            debug=debug_mode,
             use_reloader=use_reloader,
-            allow_unsafe_werkzeug=True if use_reloader else False,
+            allow_unsafe_werkzeug=(True if use_reloader else False),
         )
+    except OSError as os_e:
+        if "Address already in use" in str(os_e):
+            logger.critical(
+                f"Port {port_num} is already in use on {host_ip}. Stop the other process or use a different port."
+            )
+        else:
+            logger.critical(
+                f"Failed to start server due to OS Error: {os_e}", exc_info=True
+            )
+        sys.exit(1)
     except Exception as run_e:
         logger.critical(f"Failed to start server: {run_e}", exc_info=True)
         sys.exit(1)
     finally:
-        logger.info("Server shutdown.")
+        logger.info("VisionAid server shutdown.")
