@@ -1,7 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 
-
 const Map<String, String> supportedOcrLanguages = {
   'eng': 'English',
   'ara': 'Arabic',
@@ -19,19 +18,15 @@ const Map<String, String> supportedOcrLanguages = {
   'tel': 'Telugu',
   'kan': 'Kannada',
   'ben': 'Bengali',
-
 };
 
 const String defaultOcrLanguage = 'eng';
-
 
 const double defaultTtsVolume = 0.8;
 const double defaultTtsPitch = 1.0;
 const double defaultTtsRate = 0.5;
 
-
 const String defaultObjectCategory = 'all';
-
 
 const Map<String, String> objectDetectionCategories = {
   'all': 'All Objects',
@@ -122,7 +117,7 @@ const Map<String, String> cocoObjectToCategoryMap = {
   'oven': 'furniture', // Appliance grouped
   'toaster': 'furniture', // Appliance grouped
   'microwave': 'furniture', // Appliance grouped
-   'toilet': 'indoor', // Moved to indoor
+  'toilet': 'indoor', // Moved to indoor
   // Electronics
   'tv': 'electronics',
   'laptop': 'electronics',
@@ -141,14 +136,12 @@ const Map<String, String> cocoObjectToCategoryMap = {
   'potted plant': 'indoor', // Often indoor
 };
 
-
 class SettingsService {
   static const String _ocrLanguageKey = 'ocr_language';
   static const String _ttsVolumeKey = 'tts_volume';
   static const String _ttsPitchKey = 'tts_pitch';
   static const String _ttsRateKey = 'tts_rate';
   static const String _objectCategoryKey = 'object_category'; // New key
-
 
   static String getValidatedDefaultLanguage() {
     return supportedOcrLanguages.containsKey(defaultOcrLanguage)
@@ -160,7 +153,6 @@ class SettingsService {
     return await SharedPreferences.getInstance();
   }
 
-
   Future<String> getOcrLanguage() async {
     try {
       final prefs = await _getPrefs();
@@ -170,20 +162,23 @@ class SettingsService {
         return savedLang;
       } else {
         final defaultLang = getValidatedDefaultLanguage();
-        debugPrint('[SettingsService] No valid language saved/found, returning default: $defaultLang');
+        debugPrint(
+            '[SettingsService] No valid language saved/found, returning default: $defaultLang');
         await prefs.setString(_ocrLanguageKey, defaultLang);
         return defaultLang;
       }
     } catch (e) {
-      debugPrint('[SettingsService] Error loading OCR language: $e. Returning default.');
+      debugPrint(
+          '[SettingsService] Error loading OCR language: $e. Returning default.');
       return getValidatedDefaultLanguage();
     }
   }
 
   Future<void> setOcrLanguage(String languageCode) async {
     if (!supportedOcrLanguages.containsKey(languageCode)) {
-       debugPrint('[SettingsService] Attempted to save unsupported language: $languageCode');
-       return;
+      debugPrint(
+          '[SettingsService] Attempted to save unsupported language: $languageCode');
+      return;
     }
     try {
       final prefs = await _getPrefs();
@@ -194,7 +189,6 @@ class SettingsService {
     }
   }
 
-
   Future<double> getTtsVolume() async {
     try {
       final prefs = await _getPrefs();
@@ -203,13 +197,15 @@ class SettingsService {
         debugPrint('[SettingsService] Loaded TTS Volume: $volume');
         return volume;
       } else {
-         debugPrint('[SettingsService] Invalid/No TTS Volume found, returning default: $defaultTtsVolume');
-         await prefs.setDouble(_ttsVolumeKey, defaultTtsVolume);
-         return defaultTtsVolume;
+        debugPrint(
+            '[SettingsService] Invalid/No TTS Volume found, returning default: $defaultTtsVolume');
+        await prefs.setDouble(_ttsVolumeKey, defaultTtsVolume);
+        return defaultTtsVolume;
       }
     } catch (e) {
-       debugPrint('[SettingsService] Error loading TTS Volume: $e. Returning default.');
-       return defaultTtsVolume;
+      debugPrint(
+          '[SettingsService] Error loading TTS Volume: $e. Returning default.');
+      return defaultTtsVolume;
     }
   }
 
@@ -225,19 +221,21 @@ class SettingsService {
 
   Future<double> getTtsPitch() async {
     try {
-       final prefs = await _getPrefs();
-       final pitch = prefs.getDouble(_ttsPitchKey);
-       if (pitch != null && pitch >= 0.5 && pitch <= 2.0) {
-         debugPrint('[SettingsService] Loaded TTS Pitch: $pitch');
-         return pitch;
-       } else {
-         debugPrint('[SettingsService] Invalid/No TTS Pitch found, returning default: $defaultTtsPitch');
-         await prefs.setDouble(_ttsPitchKey, defaultTtsPitch);
-         return defaultTtsPitch;
-       }
+      final prefs = await _getPrefs();
+      final pitch = prefs.getDouble(_ttsPitchKey);
+      if (pitch != null && pitch >= 0.5 && pitch <= 2.0) {
+        debugPrint('[SettingsService] Loaded TTS Pitch: $pitch');
+        return pitch;
+      } else {
+        debugPrint(
+            '[SettingsService] Invalid/No TTS Pitch found, returning default: $defaultTtsPitch');
+        await prefs.setDouble(_ttsPitchKey, defaultTtsPitch);
+        return defaultTtsPitch;
+      }
     } catch (e) {
-       debugPrint('[SettingsService] Error loading TTS Pitch: $e. Returning default.');
-       return defaultTtsPitch;
+      debugPrint(
+          '[SettingsService] Error loading TTS Pitch: $e. Returning default.');
+      return defaultTtsPitch;
     }
   }
 
@@ -253,19 +251,21 @@ class SettingsService {
 
   Future<double> getTtsRate() async {
     try {
-       final prefs = await _getPrefs();
-       final rate = prefs.getDouble(_ttsRateKey);
-        if (rate != null && rate >= 0.0 && rate <= 1.0) {
-         debugPrint('[SettingsService] Loaded TTS Rate: $rate');
-         return rate;
-       } else {
-         debugPrint('[SettingsService] Invalid/No TTS Rate found, returning default: $defaultTtsRate');
-         await prefs.setDouble(_ttsRateKey, defaultTtsRate);
-         return defaultTtsRate;
-       }
+      final prefs = await _getPrefs();
+      final rate = prefs.getDouble(_ttsRateKey);
+      if (rate != null && rate >= 0.0 && rate <= 1.0) {
+        debugPrint('[SettingsService] Loaded TTS Rate: $rate');
+        return rate;
+      } else {
+        debugPrint(
+            '[SettingsService] Invalid/No TTS Rate found, returning default: $defaultTtsRate');
+        await prefs.setDouble(_ttsRateKey, defaultTtsRate);
+        return defaultTtsRate;
+      }
     } catch (e) {
-       debugPrint('[SettingsService] Error loading TTS Rate: $e. Returning default.');
-       return defaultTtsRate;
+      debugPrint(
+          '[SettingsService] Error loading TTS Rate: $e. Returning default.');
+      return defaultTtsRate;
     }
   }
 
@@ -279,37 +279,39 @@ class SettingsService {
     }
   }
 
-
   Future<String> getObjectDetectionCategory() async {
-      try {
-        final prefs = await _getPrefs();
-        final savedCategory = prefs.getString(_objectCategoryKey);
-        if (savedCategory != null && objectDetectionCategories.containsKey(savedCategory)) {
-          debugPrint('[SettingsService] Loaded Object Category: $savedCategory');
-          return savedCategory;
-        } else {
-           debugPrint('[SettingsService] Invalid/No Object Category found, returning default: $defaultObjectCategory');
-           await prefs.setString(_objectCategoryKey, defaultObjectCategory);
-           return defaultObjectCategory;
-        }
-      } catch (e) {
-        debugPrint('[SettingsService] Error loading Object Category: $e. Returning default.');
+    try {
+      final prefs = await _getPrefs();
+      final savedCategory = prefs.getString(_objectCategoryKey);
+      if (savedCategory != null &&
+          objectDetectionCategories.containsKey(savedCategory)) {
+        debugPrint('[SettingsService] Loaded Object Category: $savedCategory');
+        return savedCategory;
+      } else {
+        debugPrint(
+            '[SettingsService] Invalid/No Object Category found, returning default: $defaultObjectCategory');
+        await prefs.setString(_objectCategoryKey, defaultObjectCategory);
         return defaultObjectCategory;
       }
+    } catch (e) {
+      debugPrint(
+          '[SettingsService] Error loading Object Category: $e. Returning default.');
+      return defaultObjectCategory;
+    }
   }
 
   Future<void> setObjectDetectionCategory(String categoryKey) async {
-      if (!objectDetectionCategories.containsKey(categoryKey)) {
-          debugPrint('[SettingsService] Attempted to save unsupported object category: $categoryKey');
-          return;
-      }
-      try {
-        final prefs = await _getPrefs();
-        await prefs.setString(_objectCategoryKey, categoryKey);
-        debugPrint('[SettingsService] Saved Object Category: $categoryKey');
-      } catch (e) {
-        debugPrint('[SettingsService] Error saving Object Category: $e');
-      }
+    if (!objectDetectionCategories.containsKey(categoryKey)) {
+      debugPrint(
+          '[SettingsService] Attempted to save unsupported object category: $categoryKey');
+      return;
+    }
+    try {
+      final prefs = await _getPrefs();
+      await prefs.setString(_objectCategoryKey, categoryKey);
+      debugPrint('[SettingsService] Saved Object Category: $categoryKey');
+    } catch (e) {
+      debugPrint('[SettingsService] Error saving Object Category: $e');
+    }
   }
-
 }

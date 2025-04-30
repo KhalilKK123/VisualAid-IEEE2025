@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../core/models/feature_config.dart';
 
 class PageContent extends StatelessWidget {
   final String title;

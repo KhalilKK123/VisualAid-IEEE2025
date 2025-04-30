@@ -237,28 +237,28 @@ class _MyAppState extends State<MyApp> {
   }
 
   Widget _futureBuilder() => FutureBuilder<dynamic>(
-    future: _getLanguages(),
-    builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
-      if (snapshot.hasData) {
-        return _languageDropDownSection(snapshot.data as List<dynamic>);
-      } else if (snapshot.hasError) {
-        return Text('Error loading languages...');
-      } else
-        return Text('Loading Languages...');
-    },
-  );
+        future: _getLanguages(),
+        builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
+          if (snapshot.hasData) {
+            return _languageDropDownSection(snapshot.data as List<dynamic>);
+          } else if (snapshot.hasError) {
+            return Text('Error loading languages...');
+          } else
+            return Text('Loading Languages...');
+        },
+      );
 
   Widget _inputSection() => Container(
-    alignment: Alignment.topCenter,
-    padding: EdgeInsets.only(top: 25.0, left: 25.0, right: 25.0),
-    child: TextField(
-      maxLines: 11,
-      minLines: 6,
-      onChanged: (String value) {
-        _onChange(value);
-      },
-    ),
-  );
+        alignment: Alignment.topCenter,
+        padding: EdgeInsets.only(top: 25.0, left: 25.0, right: 25.0),
+        child: TextField(
+          maxLines: 11,
+          minLines: 6,
+          onChanged: (String value) {
+            _onChange(value);
+          },
+        ),
+      );
 
   Widget _btnSection() {
     return Container(
@@ -293,31 +293,31 @@ class _MyAppState extends State<MyApp> {
   }
 
   Widget _enginesDropDownSection(List<dynamic> engines) => Container(
-    padding: EdgeInsets.only(top: 50.0),
-    child: DropdownButton(
-      value: engine,
-      items: getEnginesDropDownMenuItems(engines),
-      onChanged: changedEnginesDropDownItem,
-    ),
-  );
+        padding: EdgeInsets.only(top: 50.0),
+        child: DropdownButton(
+          value: engine,
+          items: getEnginesDropDownMenuItems(engines),
+          onChanged: changedEnginesDropDownItem,
+        ),
+      );
 
   Widget _languageDropDownSection(List<dynamic> languages) => Container(
-    padding: EdgeInsets.only(top: 10.0),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        DropdownButton(
-          value: language,
-          items: getLanguageDropDownMenuItems(languages),
-          onChanged: changedLanguageDropDownItem,
+        padding: EdgeInsets.only(top: 10.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            DropdownButton(
+              value: language,
+              items: getLanguageDropDownMenuItems(languages),
+              onChanged: changedLanguageDropDownItem,
+            ),
+            Visibility(
+              visible: isAndroid,
+              child: Text("Is installed: $isCurrentLanguageInstalled"),
+            ),
+          ],
         ),
-        Visibility(
-          visible: isAndroid,
-          child: Text("Is installed: $isCurrentLanguageInstalled"),
-        ),
-      ],
-    ),
-  );
+      );
 
   Column _buildButtonColumn(
     Color color,
