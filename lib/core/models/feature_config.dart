@@ -2,12 +2,12 @@
 import 'package:flutter/material.dart';
 
 class FeatureConfig {
-  final String id;
+  final String id; 
   final String title;
   final Color color;
   final List<String> voiceCommandKeywords;
-  final WidgetBuilder pageBuilder;
-  final VoidCallback? action;
+  final WidgetBuilder pageBuilder; 
+  final VoidCallback? action; 
 
   const FeatureConfig({
     required this.id,

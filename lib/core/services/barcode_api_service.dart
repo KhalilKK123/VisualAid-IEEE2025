@@ -23,8 +23,7 @@ class BarcodeApiService {
           String brands = product['brands'] ?? 'Unknown Brand';
 
           if (productName == 'Unknown Product' && brands == 'Unknown Brand') {
-            debugPrint(
-                "[BarcodeApiService] Product not found for barcode: $barcode");
+            debugPrint("[BarcodeApiService] Product not found for barcode: $barcode");
             return "Product not found";
           }
 
@@ -32,26 +31,22 @@ class BarcodeApiService {
           if (brands != 'Unknown Brand' && brands.isNotEmpty) {
             result += " by $brands";
           }
-          debugPrint(
-              "[BarcodeApiService] Found: $result for barcode: $barcode");
+          debugPrint("[BarcodeApiService] Found: $result for barcode: $barcode");
           return result;
         } else {
-          debugPrint(
-              "[BarcodeApiService] Product not found in API response for barcode: $barcode. Status: ${data['status']}");
+          debugPrint("[BarcodeApiService] Product not found in API response for barcode: $barcode. Status: ${data['status']}");
           return "Product not found";
         }
       } else if (response.statusCode == 404) {
-        debugPrint(
-            "[BarcodeApiService] API returned 404 for barcode: $barcode");
-        return "Product not found";
-      } else {
-        debugPrint(
-            "[BarcodeApiService] API Error: ${response.statusCode} for barcode: $barcode");
+           debugPrint("[BarcodeApiService] API returned 404 for barcode: $barcode");
+          return "Product not found";
+      }
+       else {
+        debugPrint("[BarcodeApiService] API Error: ${response.statusCode} for barcode: $barcode");
         return "API Error: ${response.statusCode}";
       }
     } catch (e) {
-      debugPrint(
-          "[BarcodeApiService] Network or parsing error for barcode $barcode: $e");
+      debugPrint("[BarcodeApiService] Network or parsing error for barcode $barcode: $e");
       return "Network error";
     }
   }

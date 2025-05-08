@@ -64,6 +64,9 @@ class SuperVisionPage extends StatelessWidget {
 
       case 'text_detection':
         return _buildStyledText(displayResult, fontSize: 18);
+              
+      case 'supervision_error': // Handle specific error type from backend/home_screen
+         return _buildStyledText(displayResult.isNotEmpty ? displayResult : "SuperVision analysis failed.", isError: true);
 
       default:
         return _buildStyledText(
@@ -109,46 +112,54 @@ class SuperVisionPage extends StatelessWidget {
     // Use displayResult passed in if type was hazard_detection, otherwise use hazardName found during object detection
     final String displayText = hazardText.isNotEmpty
         ? hazardText.replaceAll('_', ' ')
-        : "No hazards detected";
-    final Color color = isActive ? Colors.yellowAccent : Colors.orangeAccent;
+        : "No hazards detected"; // This fallback might not be shown if isActive requires hazardText to be non-empty
+    final Color color = isActive ? Colors.yellowAccent : Colors.orangeAccent; // Keep orange even if not "fully active" from a global alert but still a hazard
     final FontWeight weight = isActive ? FontWeight.bold : FontWeight.bold;
     final double size = isActive ? 26 : 24;
 
     return Container(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
         decoration: BoxDecoration(
-          color: isActive ? Colors.black.withOpacity(0.7) : Colors.transparent,
+          color: isActive ? Colors.red.withOpacity(0.3) : Colors.orange.withOpacity(0.2), // More distinct background for hazard section
           borderRadius: BorderRadius.circular(10.0),
           border: Border.all(
-            color: isActive ? color : Colors.transparent,
-            width: isActive ? 2.0 : 0,
+            color: color, // Use yellow or orange for border
+            width: 2.0,
           ),
-          boxShadow: isActive
+          boxShadow: isActive // Only show prominent shadow if globally active
               ? [
                   BoxShadow(
-                    color: color.withOpacity(0.6),
+                    color: color.withOpacity(0.5),
                     blurRadius: 10.0,
-                    spreadRadius: 3.0,
+                    spreadRadius: 2.0,
                   )
                 ]
-              : [],
+              : [ // Subtle shadow if just a listed hazard
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 5.0,
+                    spreadRadius: 1.0,
+                  )
+              ],
         ),
         child: Center(
           child: Padding(
-            padding: const EdgeInsets.only(top: 200),
-            child: Column(
+            padding: const EdgeInsets.only(top: 10, bottom: 10), // Adjusted padding
+            child: Column( // Changed from top:200 to be more dynamic
+            mainAxisSize: MainAxisSize.min, // Make column take minimum space
               children: [
                 Icon(
                   Icons.warning_amber_rounded,
                   color: color,
-                  size: size + 30,
+                  size: size + 20, // Slightly smaller icon
                 ),
+                const SizedBox(height: 8),
                 Text(
-                  displayText,
+                  displayText.toUpperCase(), // Uppercase for emphasis
                   style: TextStyle(
                     fontSize: size,
                     fontWeight: weight,
-                    color: Colors.white,
+                    color: Colors.white, // Keep text white for contrast
                     shadows: const [
                       Shadow(
                         blurRadius: 6.0,

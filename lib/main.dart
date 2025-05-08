@@ -14,23 +14,26 @@ void main() async {
   ]);
 
   try {
+
     debugPrint("Fetching available cameras...");
     final cameras = await availableCameras();
 
     if (cameras.isEmpty) {
-      debugPrint("CRITICAL ERROR: No cameras available on this device!");
-      runApp(const ErrorApp(message: "No cameras found on this device."));
-      return;
+       debugPrint("CRITICAL ERROR: No cameras available on this device!");
+       runApp(const ErrorApp(message: "No cameras found on this device."));
+       return;
     }
-    debugPrint("Cameras found: ${cameras.length}. Using the first one.");
-    firstCamera = cameras.first;
+     debugPrint("Cameras found: ${cameras.length}. Using the first one.");
+     firstCamera = cameras.first;
 
-    runApp(CarouselNavigationApp(camera: firstCamera));
+     runApp(CarouselNavigationApp(camera: firstCamera));
+
   } catch (e) {
-    debugPrint("CRITICAL ERROR during camera initialization: $e");
-    runApp(ErrorApp(message: "Failed to initialize cameras: $e"));
+     debugPrint("CRITICAL ERROR during camera initialization: $e");
+     runApp(ErrorApp(message: "Failed to initialize cameras: $e"));
   }
 }
+
 
 class ErrorApp extends StatelessWidget {
   final String message;
@@ -52,7 +55,7 @@ class ErrorApp extends StatelessWidget {
           ),
         ),
       ),
-      debugShowCheckedModeBanner: false,
+       debugShowCheckedModeBanner: false,
     );
   }
 }

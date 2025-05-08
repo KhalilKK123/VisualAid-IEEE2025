@@ -14,7 +14,7 @@ class FeatureTitleBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      bottom: false,
+      bottom: false, 
       child: Align(
         alignment: Alignment.topCenter,
         child: Padding(

@@ -66,22 +66,21 @@ class TtsService {
     });
 
     await applySettings();
-    debugPrint(
-        "[TtsService] TTS Initialized with V:$volume, P:$pitch, R:$rate");
+    debugPrint("[TtsService] TTS Initialized with V:$volume, P:$pitch, R:$rate");
   }
 
   Future<void> applySettings() async {
-    try {
-      await flutterTts.setVolume(volume);
-      await flutterTts.setSpeechRate(rate);
-      await flutterTts.setPitch(pitch);
-    } catch (e) {
-      debugPrint("[TtsService] Error applying settings: $e");
-    }
+     try {
+        await flutterTts.setVolume(volume);
+        await flutterTts.setSpeechRate(rate);
+        await flutterTts.setPitch(pitch);
+     } catch (e) {
+        debugPrint("[TtsService] Error applying settings: $e");
+     }
   }
 
-  Future<void> updateSettings(
-      double newVolume, double newPitch, double newRate) async {
+
+  Future<void> updateSettings(double newVolume, double newPitch, double newRate) async {
     volume = newVolume.clamp(0.0, 1.0);
     pitch = newPitch.clamp(0.5, 2.0);
     rate = newRate.clamp(0.0, 1.0);
@@ -91,15 +90,15 @@ class TtsService {
 
   Future<void> speak(String text) async {
     if (text.isNotEmpty && ttsState != TtsState.playing) {
-      await applySettings();
-      await flutterTts.speak(text);
+       await applySettings();
+       await flutterTts.speak(text);
     } else if (ttsState == TtsState.playing) {
-      await stop();
-      await Future.delayed(const Duration(milliseconds: 100));
-      if (text.isNotEmpty) {
-        await applySettings();
-        await flutterTts.speak(text);
-      }
+        await stop();
+        await Future.delayed(const Duration(milliseconds: 100));
+        if (text.isNotEmpty) {
+           await applySettings();
+           await flutterTts.speak(text);
+        }
     }
   }
 
@@ -111,6 +110,7 @@ class TtsService {
     var result = await flutterTts.stop();
     if (result == 1) ttsState = TtsState.stopped;
   }
+
 
   Future<void> dispose() async {
     await stop();

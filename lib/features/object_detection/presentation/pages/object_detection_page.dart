@@ -1,10 +1,14 @@
 // lib/features/object_detection/presentation/pages/object_detection_page.dart
 import 'package:flutter/material.dart';
 
-class ObjectDetectionPage extends StatelessWidget {
-  final String detectionResult;
 
-  const ObjectDetectionPage({super.key, required this.detectionResult});
+class ObjectDetectionPage extends StatelessWidget {
+  final String detectionResult; 
+
+  const ObjectDetectionPage({
+    super.key,
+    required this.detectionResult 
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -15,13 +19,13 @@ class ObjectDetectionPage extends StatelessWidget {
       child: Text(
         detectionResult.replaceAll('_', ' '),
         style: const TextStyle(
-          fontSize: 24,
+          fontSize: 24, 
           fontWeight: FontWeight.bold,
-          color: Colors.white,
-          shadows: [
+          color: Colors.white, 
+          shadows: [ 
             Shadow(
               blurRadius: 8.0,
-              color: Colors.black87,
+              color: Colors.black87, 
               offset: Offset(2.0, 2.0),
             ),
           ],
