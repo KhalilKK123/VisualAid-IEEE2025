@@ -830,6 +830,91 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (_isListeningForFocusObject) _isListeningForFocusObject = false;
   }
 
+    Future<void> _setSelectedObjectCategory(String categoryKey) async {
+    if (!mounted) return;
+
+    if (!objectDetectionCategories.containsKey(categoryKey)) {
+      debugPrint("[HomeScreen] Invalid object category key: $categoryKey");
+      if (_ttsInitialized) _ttsService.speak("Invalid object category.");
+      _showStatusMessage("Invalid object category: $categoryKey", isError: true, durationSeconds: 3);
+      return;
+    }
+
+    if (_selectedObjectCategory == categoryKey) {
+        if (_ttsInitialized) _ttsService.speak("Object filter is already ${objectDetectionCategories[categoryKey]}.");
+        _showStatusMessage("Object filter already ${objectDetectionCategories[categoryKey]}.", durationSeconds: 2);
+        return;
+    }
+
+    setState(() {
+      _selectedObjectCategory = categoryKey;
+      // If on object detection page, update UI to reflect filter change
+      if (_features.isNotEmpty && _currentPage >= 0 && _currentPage < _features.length && 
+          _features[_currentPage].id == objectDetectionFeature.id) {
+            _lastObjectResult = "Filter changed to ${objectDetectionCategories[categoryKey]}.";
+      }
+    });
+
+    await _settingsService.setObjectDetectionCategory(categoryKey);
+
+    final successMessage = "Object filter set to ${objectDetectionCategories[categoryKey]}.";
+    if (_ttsInitialized) {
+      _ttsService.speak(successMessage);
+    }
+    debugPrint("[HomeScreen] Object category set to: $categoryKey (${objectDetectionCategories[categoryKey]}) by voice command.");
+    _showStatusMessage(successMessage, durationSeconds: 3);
+  }
+
+  // Helper to process category voice commands
+  // Returns true if command was handled, false otherwise
+  Future<bool> _handleObjectCategoryVoiceCommand(String command) async {
+    if (!mounted) return false;
+
+    const List<String> prefixes = [
+      "set object filter to ",
+      "change object filter to ",
+      "detect only ",
+      "show only ",
+      "filter objects to ",
+      "object filter ", // e.g., "object filter people"
+      "category ",    // e.g., "category people"
+    ];
+
+    String? matchedPrefix;
+    String spokenCategoryName = "";
+
+    for (final prefix in prefixes) {
+      if (command.startsWith(prefix)) {
+        spokenCategoryName = command.substring(prefix.length).trim();
+        matchedPrefix = prefix;
+        break;
+      }
+    }
+
+    if (matchedPrefix != null && spokenCategoryName.isNotEmpty) {
+      // Find the category key by matching the spoken name (case-insensitive)
+      for (final entry in objectDetectionCategories.entries) {
+        final categoryKey = entry.key;
+        final categoryDisplayName = entry.value;
+        if (categoryDisplayName.toLowerCase() == spokenCategoryName || 
+            categoryKey.toLowerCase() == spokenCategoryName) {
+          await _setSelectedObjectCategory(categoryKey);
+          return true; // Command handled
+        }
+      }
+      // Special handling for "all" if display name isn't exactly "all"
+      if (spokenCategoryName == "all" && objectDetectionCategories.containsKey('all')) {
+           await _setSelectedObjectCategory('all');
+          return true; // Command handled
+      }
+      // If a prefix was matched, but the category name part was not recognized
+      if (_ttsInitialized) _ttsService.speak("Category '$spokenCategoryName' not recognized.");
+      _showStatusMessage("Category '$spokenCategoryName' not recognized.", isError: true);
+      return true; // Consumed the command prefix, even if category was wrong
+    }
+    return false; // Command not related to object category filtering
+  }
+
   void _handleSpeechResult(SpeechRecognitionResult result) {
     if (mounted && result.finalResult && result.recognizedWords.isNotEmpty) {
       String command = result.recognizedWords.toLowerCase().trim();
@@ -854,18 +939,35 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  void _processGeneralSpeechCommand(String command) {
+ void _processGeneralSpeechCommand(String command) async { // Made async
+    if (!mounted) return;
     if (command == 'settings' || command == 'setting') { _navigateToSettingsPage(); return; }
+
+    // Attempt to handle object category command first
+    if (await _handleObjectCategoryVoiceCommand(command)) { // Added await
+        return; // Command was handled (either successfully or category name was invalid but prefix matched)
+    }
+
+    // If not a category command, try to navigate to a feature page
     int targetPageIndex = -1;
     for (int i = 0; i < _features.length; i++) {
+      if (i >= _features.length) break; // Should not happen, but defensive
       for (String keyword in _features[i].voiceCommandKeywords) {
-        if (command.contains(keyword)) { targetPageIndex = i; break; }
+        if (command.contains(keyword)) {
+          targetPageIndex = i;
+          break;
+        }
       }
       if (targetPageIndex != -1) break;
     }
+
     if (targetPageIndex != -1) {
       _navigateToPage(targetPageIndex);
-    } else { _showStatusMessage('Command "$command" not recognized.', durationSeconds: 3); }
+    } else {
+      // Only show "command not recognized" if it wasn't handled by category or page navigation
+      _showStatusMessage('Command "$command" not recognized.', durationSeconds: 3);
+      if(_ttsInitialized) _ttsService.speak('Command not recognized.');
+    }
   }
 
 

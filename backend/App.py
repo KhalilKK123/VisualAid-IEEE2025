@@ -25,7 +25,7 @@ from ultralytics import YOLO # Using YOLO from ultralytics for YOLO-World
 # --- Ollama Configuration ---
 OLLAMA_MODEL_NAME = os.environ.get("OLLAMA_MODEL", "gemma3:12b") # Using as a common default
 OLLAMA_API_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434/api/generate")
-OLLAMA_REQUEST_TIMEOUT = 360  # Seconds for Ollama request timeout
+OLLAMA_REQUEST_TIMEOUT = 60  # Seconds for Ollama request timeout
 
 # --- Debug Configuration ---
 SAVE_OCR_IMAGES = False  # Set to True to enable saving OCR debug images
