@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:vibration/vibration.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/models/feature_config.dart';
 import '../../core/services/websocket_service.dart';
@@ -121,9 +122,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   };
 
 
+ static const String _hasRunBeforeKey = 'has_run_before'; // to check if run before
 
-
-
+  // --- Tutorial State Variables ---
+  bool _isTutorialActive = false;
+  int _currentTutorialStep = 0;
+  List<String> _tutorialMessages = [];
+  List<String> _featureSpecificTutorialMessages = [];
+  bool _isFirstRun = true; // Assume true until checked
+  bool _isTutorialSpeaking = false; // To manage TTS during tutorial
 
 
 
@@ -187,9 +194,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     await _loadAndInitializeSettings();
     await _checkVibratorAndAmplitude();
     await _prepareAudioPlayers();
+    _initializeTutorialContent(); // Initialize tutorial messages
+    // Check for first run after settings are loaded (SharedPreferences is available)
+    await _checkFirstRun();
 
     final currentFeatureId = _features.isNotEmpty ? _features[_currentPage.clamp(0, _features.length - 1)].id : null;
-    // Don't init main camera if starting on barcode or focus mode (until object selected)
     if (currentFeatureId != barcodeScannerFeature.id && currentFeatureId != focusModeFeature.id) {
       await _initializeMainCameraController();
     } else {
@@ -197,9 +206,64 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
     await _initSpeech();
     _initializeWebSocket();
-    if (_ttsInitialized && _features.isNotEmpty && _features.first.title.isNotEmpty) {
+
+    if (_isFirstRun && _ttsInitialized) {
+      // Delay slightly to ensure UI is ready before starting tutorial
+      Future.delayed(const Duration(milliseconds: 1500), () {
+        if (mounted 
+        //&& _isFirstRun
+        ) { // Double check _isFirstRun in case of quick state changes
+          _startFullTutorial(isAutoStart: true);
+        }
+      });
+    } else if (_ttsInitialized && _features.isNotEmpty && _features.first.title.isNotEmpty && !_isTutorialActive) {
        _ttsService.speak(_features[0].title);
     }
+  }
+
+  Future<void> _checkFirstRun() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _isFirstRun = !(prefs.getBool(_hasRunBeforeKey) ?? false);
+    });
+    if (_isFirstRun) {
+      debugPrint("[HomeScreen] First run detected.");
+      // Mark that the app has run, so tutorial doesn't auto-start next time
+      // Do this after the tutorial completes, or immediately if preferred.
+      // For now, let's mark it when tutorial starts.
+    } else {
+      debugPrint("[HomeScreen] Not a first run.");
+    }
+  }
+
+  void _initializeTutorialContent() {
+    _tutorialMessages = [
+      "Welcome to Vision Aid. This app is designed to help you understand your surroundings using your phone's camera and advanced analysis.",
+      "Let's quickly go over the app's interface. At the top, you'll see the title of the currently selected feature, like 'Object Detection'.",
+      "At the bottom center is the main action button. For features like Text Recognition or Scene Description, tapping this button will capture an image and process it. Long-pressing this button activates voice commands, allowing you to switch features or change settings by speaking.",
+      "On the left and right edges of the screen, you'll find arrow buttons. You can tap these to navigate to the previous or next feature. You can also swipe left or right anywhere on the screen to change features.",
+      "In the top right corner, the gear icon opens the settings screen. Here, you can adjust voice speed, language for text recognition, and object detection filters. you can also chnage the object detection filters to filter what types of objects are detected, uisng voice commands, just hold the main action button and say the phrase \" category \" then name your category.",
+      "And in the top left corner, you'll see a question mark icon. That's the tutorial button! Tap it anytime for a quick explanation of the current feature. Long-press it to replay this full tutorial.",
+      "Vision Aid offers several powerful features. Let's explore them.",
+      "SuperVision: This is our middleware feature, for your convenience. When on the SuperVision page, tap the main action button. It analyzes the camera view using AI, and, based on the analysis, it might include identifying objects, describing the scene, reading text, or even alerting you to hazards it finds.",
+      "Object Detection: This feature works in real-time. As you point your phone around, it will continuously identify and announce objects it sees. You can filter what types of objects are detected in the settings menu.",
+      "Hazard Detection: This feature also works in real-time to alert you to potential hazards, such as cars or specific items that could be dangerous. If a hazard is detected, the app will make a sound and vibrate.",
+      "Object Finder: First, tap the main action button. The app will ask you to say the name of the object you want to find. After you say the object's name, the app will use sound and vibration to help guide you towards it as it's detected in the camera's view.",
+      "Scene Description: Point your phone towards an area you want to understand better, then tap the main action button. The app will process the image and describe the scene to you.",
+      "Text Recognition: If you want to read text from a document, sign, or product, point your phone at the text and tap the main action button. The app will read the detected text aloud. You can change the language for text recognition in the settings.",
+      "Barcode Scanner: This feature activates automatically when you navigate to its page. Simply point your camera at a barcode. The app will scan it and, if the product is in its database, tell you the product information.",
+      "To navigate between these features, you have a few options.",
+      "You can swipe left or right anywhere on the main part of the screen.",
+      "You can tap the large arrow buttons that appear on the left and right sides of the screen.",
+      "Or, you can use voice commands. Long-press the main action button at the bottom, wait for the prompt, and then say the feature name like 'object detection', 'go to page 3', or 'barcode scanner'. You can also say 'settings' to go to the settings page.",
+      "Remember, if you ever need a quick reminder on how to use the feature you're currently on, just tap the question mark button in the top left. To hear this full tutorial again, long-press that same question mark button.",
+      "This concludes the main tutorial. We hope Vision Aid empowers you to explore your world with greater confidence. Happy exploring!"
+    ];
+
+    // Placeholder for feature-specific messages, will be populated dynamically
+    // Or you can pre-define them here if they are static.
+    // For now, let's make them dynamic based on current feature.
   }
 
   void _initializeFeatures() {
@@ -251,6 +315,154 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+
+
+
+
+
+
+
+
+
+// --- Tutorial Logic ---
+
+  Future<void> _markTutorialAsCompleted() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_hasRunBeforeKey, true);
+    if (mounted) {
+      setState(() {
+        _isFirstRun = false; // Update state if tutorial was just completed
+      });
+    }
+    debugPrint("[Tutorial] Marked as completed. First run is now false.");
+  }
+
+  void _startFullTutorial({bool isAutoStart = false}) async {
+    if (!mounted || !_ttsInitialized) return;
+    if (_isTutorialActive && _isTutorialSpeaking) { // If already running, a long press might intend to restart
+        await _ttsService.stop();
+        _isTutorialSpeaking = false;
+    }
+    if (isAutoStart && !_isFirstRun) return; // Don't auto-start if not first run
+
+    debugPrint("[Tutorial] Starting full tutorial. Auto-start: $isAutoStart");
+    if (_ttsInitialized) await _ttsService.stop(); // Stop any current TTS
+
+    setState(() {
+      _isTutorialActive = true;
+      _currentTutorialStep = 0;
+      _isTutorialSpeaking = true;
+    });
+
+    if (isAutoStart || _isFirstRun) { // Mark as run if tutorial starts, especially on auto-start
+      await _markTutorialAsCompleted();
+    }
+    _playNextTutorialStep();
+  }
+
+  void _startCurrentFeatureTutorial() async {
+    if (!mounted || !_ttsInitialized) return;
+    if (_isTutorialActive && _isTutorialSpeaking) {
+        await _ttsService.stop();
+        _isTutorialSpeaking = false;
+        _endTutorial(); // Cancel full tutorial if it was running
+    }
+    
+    final currentFeature = _features[_currentPage.clamp(0, _features.length - 1)];
+    String featureHelpText = _getFeatureSpecificHelp(currentFeature.id);
+
+    debugPrint("[Tutorial] Starting help for feature: ${currentFeature.title}");
+    if (_ttsInitialized) await _ttsService.stop();
+
+    setState(() {
+      _isTutorialActive = true; // Use the same overlay
+      _currentTutorialStep = 0; // Reset step for single message display
+      _tutorialMessages = [featureHelpText]; // Temporarily set _tutorialMessages for the overlay
+      _isTutorialSpeaking = true;
+    });
+
+    // Speak the single help message
+    await _ttsService.speak(featureHelpText);
+    if (mounted) {
+      // After speaking, revert to a non-speaking state but keep overlay briefly or auto-hide
+      // For simplicity, let's just end the "tutorial mode" for single feature help after speaking
+       Future.delayed(const Duration(milliseconds: 500), () { // Short delay
+           if(mounted && _tutorialMessages.isNotEmpty && _tutorialMessages[0] == featureHelpText) { // Ensure it's still the same help
+               _endTutorial();
+           }
+       });
+    }
+  }
+
+  String _getFeatureSpecificHelp(String featureId) {
+    // Return specific help text based on feature ID
+    switch (featureId) {
+      case 'supervision':
+        return "SuperVision: Tap the main action button at the bottom. The app will then analyze what the camera sees and provide a smart description using AI, through automatically identifying what the camera sees. Long press the action button for general voice commands.";
+      case 'object_detection':
+        return "Object Detection: This feature runs in real-time. Point your camera, and it will announce recognized objects. No need to tap the button unless you want to use voice commands via long press. You can filter object categories in settings.";
+      case 'hazard_detection':
+        return "Hazard Detection: This feature runs in real-time. It automatically alerts you to potential hazards with sound and vibration. No button tap needed for detection. Long press the action button for general voice commands.";
+      case 'focus_mode':
+        return "Object Finder: Tap the main action button, then clearly say the name of the object you're looking for. The app will then use sounds and vibrations to guide you as the object comes into view and gets closer to the center.";
+      case 'scene_detection':
+        return "Scene Description: Point your camera at the scene you want described, then tap the main action button. The app will analyze and describe it. Long press for voice commands.";
+      case 'text_detection':
+        return "Text Recognition: Point your camera at the text you want to read, then tap the main action button. The app will detect and read the text aloud. Change OCR language in settings. Long press for voice commands.";
+      case 'barcode_scanner':
+        return "Barcode Scanner: This activates automatically on this page. Point your camera at a barcode to scan it. The app will announce product information if found. No button tap needed for scanning.";
+      default:
+        return "Help for this feature is not yet available. Tap the main action button or long press for voice commands.";
+    }
+  }
+
+  void _playNextTutorialStep() async {
+    if (!mounted || !_isTutorialActive || !_isTutorialSpeaking) {
+      if (_isTutorialActive) _endTutorial(); // Ensure cleanup if interrupted externally
+      return;
+    }
+
+    if (_currentTutorialStep >= _tutorialMessages.length) {
+      _endTutorial();
+      return;
+    }
+
+    final message = _tutorialMessages[_currentTutorialStep];
+    if (mounted) {
+      setState(() {}); // Update UI to show current tutorial message
+    }
+
+    await _ttsService.speak(message); // Assumes ttsService.speak awaits completion
+
+    if (mounted && _isTutorialActive && _isTutorialSpeaking) { // Check again if still active after speaking
+      _currentTutorialStep++;
+      // Optional: Add a slight delay between steps if desired
+      // await Future.delayed(const Duration(milliseconds: 300));
+      _playNextTutorialStep(); // Recurse for next step
+    } else if (mounted && _isTutorialActive && !_isTutorialSpeaking) {
+        // Means it was stopped (e.g. by user tapping tutorial button again)
+        _endTutorial();
+    }
+  }
+
+  void _endTutorial() {
+    if (!mounted) return;
+    debugPrint("[Tutorial] Ending tutorial. Was active: $_isTutorialActive, Current step: $_currentTutorialStep");
+    if (_isTutorialSpeaking) {
+       _ttsService.stop(); // Stop TTS if it was part of this tutorial flow
+    }
+    setState(() {
+      _isTutorialActive = false;
+      _currentTutorialStep = 0;
+      _isTutorialSpeaking = false;
+      // Restore _tutorialMessages if it was changed for single feature help
+      if (_tutorialMessages.length == 1 && _tutorialMessages[0].startsWith("SuperVision:") == false) { // A bit hacky check
+          _initializeTutorialContent(); // Re-init to full list
+      }
+    });
+  }
+
+  // --- End Tutorial Logic ---
 
 
 
@@ -1360,6 +1572,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
          return; // Avoid proceeding with invalid state
     }
 
+    if (_isTutorialActive) {
+        debugPrint("[Tutorial] Page changed during active tutorial. Ending tutorial.");
+        await _ttsService.stop(); // Stop TTS immediately
+        _isTutorialSpeaking = false; // Signal to stop iteration
+        _endTutorial(); // Perform cleanup
+    }
+
     final previousFeature = _features[previousPageIndex];
     final newFeature = _features[newPageIndex];
     debugPrint("[Navigation] Page changed from ${previousFeature.id} (idx $previousPageIndex) to ${newFeature.id} (idx $newPageIndex)");
@@ -1516,7 +1735,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
 
   // --- Widget Build Logic ---
-  @override
+   @override
   Widget build(BuildContext context) {
     if (_features.isEmpty) return const Scaffold(backgroundColor: Colors.black, body: Center(child: Text("No features.", style: TextStyle(color: Colors.white))));
 
@@ -1537,61 +1756,120 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
           _buildFeaturePageView(),
           FeatureTitleBanner(title: currentFeature.title, backgroundColor: currentFeature.color),
-            // --- Left Navigation Arrow ---
-          if (_currentPage >= 0) // Only show if not the first page
+          
+          // --- Tutorial Button ---
+          _buildTutorialButton(),
+
+          // --- Left Navigation Arrow ---
+          if (_currentPage >= 0 && !_isTutorialActive) // Hide arrows during tutorial
             Align(
               alignment: Alignment.centerLeft,
               child: Padding(
-                // Add some padding from the edge
                 padding: const EdgeInsets.only(left: 8.0),
                 child: IconButton(
-                  icon: const Icon(
-                    Icons.arrow_back_ios_new_rounded, // Or Icons.chevron_left
-                    color: Colors.white,
-                    size: 48.0, // Adjust size as needed
-                  ),
-                  onPressed: _navigateToPreviousPage, // Call the helper method
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 48.0),
+                  onPressed: _navigateToPreviousPage,
                   tooltip: 'Previous Feature',
-                  // Optional: Add background for better visibility
-                  style: IconButton.styleFrom(
-                    backgroundColor: Colors.black.withOpacity(0.35),
-                    padding: const EdgeInsets.all(10.0),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
-                  ),
+                  style: IconButton.styleFrom(backgroundColor: Colors.black.withOpacity(0.35), padding: const EdgeInsets.all(10.0), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50))),
                 ),
               ),
             ),
 
           // --- Right Navigation Arrow ---
-          if (_currentPage <= _features.length - 1) // Only show if not the last page
+          if (_currentPage <= _features.length - 1 && !_isTutorialActive) // Hide arrows during tutorial
             Align(
               alignment: Alignment.centerRight,
               child: Padding(
-                // Add some padding from the edge
                 padding: const EdgeInsets.only(right: 8.0),
                 child: IconButton(
-                  icon: const Icon(
-                    Icons.arrow_forward_ios_rounded, // Or Icons.chevron_right
-                    color: Colors.white,
-                    size: 48.0, // Adjust size as needed
-                  ),
-                  onPressed: _navigateToNextPage, // Call the helper method
+                  icon: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 48.0),
+                  onPressed: _navigateToNextPage,
                   tooltip: 'Next Feature',
-                  // Optional: Add background for better visibility
-                  style: IconButton.styleFrom(
-                    backgroundColor: Colors.black.withOpacity(0.35),
-                    padding: const EdgeInsets.all(10.0),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
-                  ),
+                  style: IconButton.styleFrom(backgroundColor: Colors.black.withOpacity(0.35), padding: const EdgeInsets.all(10.0), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50))),
                 ),
               ),
             ),
-          _buildSettingsButton(),
-          _buildMainActionButton(currentFeature),
+          
+          if (!_isTutorialActive) // Hide settings during tutorial for simplicity
+            _buildSettingsButton(),
+          
+          if (!_isTutorialActive) // Hide main action button during tutorial
+             _buildMainActionButton(currentFeature),
+
+          // --- Tutorial Overlay ---
+          if (_isTutorialActive)
+            _buildTutorialOverlay(),
         ],
       ),
     );
   }
+
+  Widget _buildTutorialButton() {
+    return Align(
+      alignment: Alignment.topLeft,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.only(top: 10.0, left: 15.0),
+          child: Container( // Added container for better tap area and visual feedback
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.3),
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              icon: const Icon(
+                Icons.question_mark_rounded,
+                color: Colors.white,
+                size: 30.0,
+                shadows: [Shadow(blurRadius: 6.0, color: Colors.black54, offset: Offset(1.0, 1.0))]
+              ),
+              tooltip: 'Tap for feature help, Long-press for full tutorial',
+              onPressed: () {
+                if (_isTutorialActive && _isTutorialSpeaking) { // If full tutorial is running, tap cancels it
+                  _ttsService.stop();
+                  _isTutorialSpeaking = false; // This will make _playNextTutorialStep call _endTutorial
+                  // _endTutorial(); // Or call directly
+                } else {
+                  _startCurrentFeatureTutorial();
+                }
+              },
+              onLongPress: () {
+                _startFullTutorial();
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTutorialOverlay() {
+    if (!_isTutorialActive || _currentTutorialStep >= _tutorialMessages.length) {
+      return const SizedBox.shrink();
+    }
+    final message = _tutorialMessages[_currentTutorialStep];
+
+    return Positioned.fill(
+      child: Container(
+        color: Colors.black.withOpacity(0.85),
+        padding: const EdgeInsets.only(top: 150, bottom: 150, left: 30, right: 30), // Adjusted padding
+        child: Center(
+          child: SingleChildScrollView( // Added SingleChildScrollView for long messages
+            child: Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.w600,
+                height: 1.5, // Line height
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
 
   Widget _buildCameraDisplay() {
     if (_isMainCameraInitializing) {
