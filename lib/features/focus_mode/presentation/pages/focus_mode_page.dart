@@ -27,7 +27,7 @@ class FocusModePage extends StatelessWidget {
     );
     final TextStyle foundStyle = baseStyle.copyWith(
       fontSize: 48,
-      color: Colors.lightGreenAccent, // Highlight when found
+      color: const Color.fromARGB(255, 255, 227, 14), // Highlight when found
        shadows: [
         Shadow(blurRadius: 10.0, color: Colors.black, offset: Offset(3.0, 3.0)),
         Shadow(blurRadius: 15.0, color: Colors.white.withOpacity(0.4), offset: Offset(0,0)),
@@ -38,7 +38,7 @@ class FocusModePage extends StatelessWidget {
 
     if (isPrompting) {
       content = Text(
-        "Say the object name...",
+        "Tap the button, then say the object name...",
         style: baseStyle.copyWith(color: Colors.yellowAccent), // Prompt color
         textAlign: TextAlign.center,
       );

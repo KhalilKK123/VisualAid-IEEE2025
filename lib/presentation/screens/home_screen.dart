@@ -843,7 +843,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           _currentProximity = 0.0; _announcedFocusFound = false;
         });
         _stopFocusFeedback();
-        if (_ttsInitialized) _ttsService.speak("Focusing on ${_focusedObject ?? 'object'}");
+        if (_ttsInitialized) _ttsService.speak("Finding ${_focusedObject ?? 'object'}");
         debugPrint("[Focus] Object set. Triggering camera initialization...");
         _initializeMainCameraController(); // Initialize camera for focus mode
       } else {
@@ -1165,13 +1165,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final messenger = ScaffoldMessenger.of(context); messenger.removeCurrentSnackBar();
     messenger.showSnackBar( SnackBar( content: Text(message), backgroundColor: isError ? Colors.redAccent : Colors.grey[800], duration: Duration(seconds: durationSeconds), behavior: SnackBarBehavior.floating, margin: const EdgeInsets.only(bottom: 90.0, left: 15.0, right: 15.0), shape: RoundedRectangleBorder( borderRadius: BorderRadius.circular(10.0), ), ), );
   }
-
   void _navigateToPage(int pageIndex) {
-    if (!mounted || _features.isEmpty) return; final targetIndex = pageIndex.clamp(0, _features.length - 1);
-    if (targetIndex != _currentPage && _pageController.hasClients) {
+    if (!mounted || _features.isEmpty) return;
+    final targetIndex = pageIndex.clamp(0, _features.length - 1);
+
+    // --- ADD CHECK: Only navigate if target is different from current page ---
+    if (targetIndex == _currentPage) {
+        debugPrint("Attempted to navigate to the same page ($targetIndex). Skipping.");
+        return;
+    }
+    // --- END CHECK ---
+
+    if (_pageController.hasClients) {
       if (_ttsInitialized) _ttsService.stop();
-      debugPrint("Navigating to page index: $targetIndex (${_features[targetIndex].title})");
-      _pageController.animateToPage( targetIndex, duration: const Duration(milliseconds: 400), curve: Curves.easeInOut );
+      debugPrint("Navigating from $_currentPage to page index: $targetIndex (${_features[targetIndex].title})");
+      _pageController.animateToPage(
+        targetIndex,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+      );
+       // IMPORTANT: Do NOT update _currentPage here. Let _onPageChanged handle it
+       // when the animation completes or settles.
     }
   }
 
@@ -1197,6 +1211,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     ), actions: <Widget>[ TextButton( child: const Text('OK'), onPressed: () => Navigator.of(dialogContext).pop(), ), ], shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15.0)), ), );
   }
 
+ void _navigateToPreviousPage() {
+    // Check if we are not on the first page
+    if (_currentPage >= 0) {
+      _navigateToPage(_currentPage - 1);
+    }
+  }
+
+  void _navigateToNextPage() {
+    // Check if we are not on the last page
+    if (_currentPage <= _features.length - 1) {
+      if(_currentPage+1 == BarcodeScannerPage){
+        _navigateToPage(_currentPage);
+        return;
+      }
+      _navigateToPage(_currentPage + 1);
+    }
+  }
+
 
 
 
@@ -1212,98 +1244,164 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (!mounted) return;
     final newPageIndex = index.clamp(0, _features.length - 1);
     if (newPageIndex >= _features.length) return; // Should not happen
-    final previousPageIndex = _currentPage.clamp(0, _features.length - 1);
-    if (previousPageIndex >= _features.length || previousPageIndex == newPageIndex) return;
+
+    // --- CAPTURE PREVIOUS INDEX BEFORE ANY STATE CHANGE (Robustness Improvement) ---
+    final int previousPageIndex = _currentPage;
+    // --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    // Prevent redundant calls if the index hasn't actually changed
+    if (previousPageIndex == newPageIndex) return;
+
+    // Ensure indices are valid before proceeding
+    if (previousPageIndex < 0 || previousPageIndex >= _features.length) {
+         debugPrint("[Navigation Error] Invalid previousPageIndex: $previousPageIndex");
+         return; // Avoid proceeding with invalid state
+    }
 
     final previousFeature = _features[previousPageIndex];
     final newFeature = _features[newPageIndex];
     debugPrint("[Navigation] Page changed from ${previousFeature.id} (idx $previousPageIndex) to ${newFeature.id} (idx $newPageIndex)");
 
+    // Stop ongoing activities FIRST
     if (_ttsInitialized) _ttsService.stop();
     _stopDetectionTimer();
     _stopFocusFeedback();
-    if (previousFeature.id == hazardDetectionFeature.id) _clearHazardAlert(); // Clear dedicated hazard page alert
+    if (previousFeature.id == hazardDetectionFeature.id) _clearHazardAlert();
 
     bool wasFocusMode = _isFocusModeActive;
     _isFocusModeActive = newFeature.id == focusModeFeature.id;
 
-    if(mounted) setState(() => _currentPage = newPageIndex); else return;
+    // --- UPDATE _currentPage STATE SYNCHRONOUSLY (Robustness Improvement) ---
+    _currentPage = newPageIndex;
+    // --- --- --- --- --- --- --- --- --- --- --- ---
 
-    // Camera Transitions
+    // --- Perform setState EARLY (Robustness Improvement / User Preference) ---
+    // This triggers the UI rebuild process. Subsequent async operations might complete after this.
+    if(mounted) setState(() {}); else return;
+    // --- --- --- --- --- --- --- --- --- --- --- ---
+
+    // --- Camera Transitions (Integrating User Logic) ---
     bool isSwitchingToBarcode = newFeature.id == barcodeScannerFeature.id;
-    bool isSwitchingToFocusInitial = _isFocusModeActive && _focusedObject == null; // Entering focus mode, no object yet
+    // Focus Initial: Entering focus mode AND object is null
+    bool isSwitchingToFocusInitial = _isFocusModeActive && _focusedObject == null && newFeature.id == focusModeFeature.id;
     bool isSwitchingFromBarcode = previousFeature.id == barcodeScannerFeature.id;
-    bool isSwitchingFromFocus = wasFocusMode && !_isFocusModeActive; // Specifically leaving focus mode
+    // Switching From Focus: Was focus mode AND (is no longer focus mode OR focus object is now set)
+    // Let's stick to the user's simpler definition for now: was focus mode AND is no longer focus mode
+    bool isSwitchingFromFocus = wasFocusMode && !_isFocusModeActive;
 
     debugPrint("[Nav] CamLogic: ToBarcode=$isSwitchingToBarcode, ToFocusInitial=$isSwitchingToFocusInitial, FromBarcode=$isSwitchingFromBarcode, FromFocus=$isSwitchingFromFocus");
-if (isSwitchingToFocusInitial) {
-    if (_cameraController != null || _isMainCameraInitializing) {
-        debugPrint("[Nav] Switching TO barcode/initial focus - disposing main camera...");
-        await _ttsService.speak("Tap the button, then say the object name.");
-        await _disposeMainCameraController();
-    }
-}
-    if (isSwitchingToBarcode || isSwitchingToFocusInitial) {
+
+    // --- User's TTS Logic for Focus Initial ---
+    // This specific block handles the TTS prompt *before* disposal when switching to focus initial state.
+    // We keep the `await` on dispose here because the TTS likely needs to happen first.
+    if (isSwitchingToFocusInitial) {
         if (_cameraController != null || _isMainCameraInitializing) {
-            debugPrint("[Nav] Switching TO barcode/initial focus - disposing main camera...");
-            await _disposeMainCameraController();
-        }
-    } else if (isSwitchingFromBarcode || isSwitchingFromFocus) {
-        // If new page is NOT barcode and NOT initial focus, init camera
-        bool newPageNeedsCamera = newFeature.id != barcodeScannerFeature.id && !(_isFocusModeActive && _focusedObject == null);
-        if (newPageNeedsCamera) {
-            debugPrint("[Nav] Switching FROM barcode/focus TO page needing camera (${newFeature.id}) - initializing main camera...");
-            await _initializeMainCameraController();
-             await _initializeMainCameraController();
-             setState(() {});
-        }
-    } else { // Switching between two pages that might use camera (e.g. Object to Scene, or Object to SuperVision)
-        bool newPageNeedsCamera = newFeature.id != barcodeScannerFeature.id && !(_isFocusModeActive && _focusedObject == null);
-        if (newPageNeedsCamera && (_cameraController == null || _isMainCameraInitializing)) {
-            debugPrint("[Nav] Page ${newFeature.id} needs camera, ensuring it's initialized.");
-            await _initializeMainCameraController();
-        } else if (!newPageNeedsCamera && _cameraController != null) {
-            // This case should be covered by isSwitchingToBarcode or isSwitchingToFocusInitial
+            debugPrint("[Nav] Switching TO initial focus - Speaking TTS then disposing main camera...");
+            if(_ttsInitialized) await _ttsService.speak("Object finder. Tap the button, then say the object name."); // Speak first
+            await _disposeMainCameraController(); // Then dispose (awaited)
+             debugPrint("[Nav] Main camera disposed after TTS for focus.");
+        } else {
+             // Camera is already null/not initializing, just speak the prompt
+             if(_ttsInitialized) await _ttsService.speak("Object finder. Tap the button, then say the object name.");
         }
     }
+    // --- End User's TTS Logic ---
+
+    // --- General Disposal Logic (excluding the focus initial case handled above) ---
+    // Handles switching TO barcode. We make disposal async here.
+    else if (isSwitchingToBarcode) {
+         if (_cameraController != null || _isMainCameraInitializing) {
+            debugPrint("[Nav] Switching TO barcode - disposing main camera (async)...");
+            _disposeMainCameraController(); // Dispose without awaiting
+        }
+    }
+    // --- End General Disposal Logic ---
+
+    // --- Initialization Logic (Including User's Double Init) ---
+    // Handles switching FROM barcode or FROM focus mode (when it's not focus initial anymore)
+    else if (isSwitchingFromBarcode || isSwitchingFromFocus) {
+        bool newPageNeedsCamera = newFeature.id != barcodeScannerFeature.id && !isSwitchingToFocusInitial; // Double check target isn't focus initial
+        if (newPageNeedsCamera) {
+            debugPrint("[Nav] Switching FROM barcode/focus TO page needing camera (${newFeature.id}) - Applying User's Double Initialization...");
+            // --- User's Double Initialization Workaround ---
+            await Future.delayed(const Duration(milliseconds: 200));
+            _initializeMainCameraController(); // First call
+            _initializeMainCameraController(); // Second call
+             if(mounted) setState(() {}); // User's explicit setState after double init
+             debugPrint("[Nav] Double camera initialization complete.");
+             // --- End User's Workaround ---
+        }
+    }
+    // --- End Initialization Logic ---
+
+    // --- Handle transitions between other pages needing camera ---
+    else {
+        bool newPageNeedsCamera = newFeature.id != barcodeScannerFeature.id && !isSwitchingToFocusInitial;
+        // Check if camera is needed AND (it's null OR it's currently initializing - avoid triggering if already good)
+        if (newPageNeedsCamera && (_cameraController == null || !_cameraController!.value.isInitialized) && !_isMainCameraInitializing ) {
+             debugPrint("[Nav] Other transition: Page ${newFeature.id} needs camera, ensuring it's initialized (async).");
+            _initializeMainCameraController(); // Initialize without awaiting
+            _initializeMainCameraController(); // Second call
+            setState(() {}); // User's explicit setState after double init
+           // if(mounted) setState(() {}); // User's explicit setState after double init
+        }
+    }
+    // --- End Camera Transitions ---
 
 
-    // Clear Previous Page Results & Reset State
+    // --- Clear Previous Page Results & Reset State ---
+    // It's generally safer to clear state *after* potentially long async operations
+    // like camera init/dispose have at least been initiated.
     if (mounted) {
       setState(() {
         _isProcessingImage = false; _lastRequestedFeatureId = null;
         if (previousFeature.id == objectDetectionFeature.id) _lastObjectResult = "";
-        else if (previousFeature.id == hazardDetectionFeature.id) { /* _clearHazardAlert(); // Already called */ } // _currentDisplayedHazardName remains for passive display if user swipes back
+        // Hazard clear already happened earlier based on feature ID
         else if (previousFeature.id == sceneDetectionFeature.id || previousFeature.id == textDetectionFeature.id) _lastSceneTextResult = "";
-        
+
         if (previousFeature.id == supervisionFeature.id) {
             _isSupervisionProcessing = false; _supervisionResultType = null;
             _supervisionDisplayResult = ""; _supervisionHazardName = "";
             _supervisionIsHazardActive = false;
         }
-        if (isSwitchingFromFocus) { // Reset focus state IF leaving focus mode
+        // Only reset Focus state variables if truly LEAVING focus mode.
+        // Don't reset if just selecting an object *within* focus mode.
+        if (isSwitchingFromFocus) {
+            debugPrint("[Nav] Resetting Focus state variables as we are leaving Focus Mode.");
             _focusedObject = null; _isFocusPromptActive = false; _isFocusObjectDetectedInFrame = false;
             _isFocusObjectCentered = false; _currentProximity = 0.0; _announcedFocusFound = false;
         }
       });
     } else { return; }
+    // --- End Clear State ---
 
-    if (_ttsInitialized) _ttsService.speak(newFeature.title);
 
-    if (_isFocusModeActive && _focusedObject == null) { // Entering Focus Mode, object not yet selected
-        setState(() {
-            _isFocusPromptActive = true; // Show prompt
-            _isFocusObjectDetectedInFrame = false; _isFocusObjectCentered = false;
-            _currentProximity = 0.0; _announcedFocusFound = false;
-        });
-        _stopFocusFeedback();
-        debugPrint("[Focus] Entered Focus Mode. Prompting for object.");
-        if (_ttsInitialized) await _ttsService.speak("Focus Mode. Tap the button, then say the object name.");
-    } else {
-        // For other pages including SuperVision, Object, Hazard, Scene, Text
-        _startDetectionTimerIfNeeded(); // Start timer if new page is realtime (Object/Hazard/Focus with object)
+    // --- Final Page Setup ---
+    // Announce New Feature Title (if not focus initial, as that already announced)
+    if (_ttsInitialized && !isSwitchingToFocusInitial) {
+         _ttsService.speak(newFeature.title);
     }
-  }
+
+    // Setup Focus Prompt (if entering focus initial state)
+    // Note: TTS prompt was handled earlier in this specific case.
+    if (isSwitchingToFocusInitial) {
+        if(mounted) {
+            setState(() {
+                _isFocusPromptActive = true; // Show prompt UI element
+                _isFocusObjectDetectedInFrame = false; _isFocusObjectCentered = false;
+                _currentProximity = 0.0; _announcedFocusFound = false;
+            });
+        }
+        _stopFocusFeedback(); // Ensure feedback is off initially
+        debugPrint("[Focus] Entered Focus Mode Initial State (Object prompt active).");
+    }
+    // Start Detection Timer if applicable for the new page
+    else {
+        // Applies to ObjectDetection, HazardDetection, FocusMode (once object selected)
+        _startDetectionTimerIfNeeded();
+    }
+    // --- End Final Page Setup ---
+}
 
 
 
@@ -1337,6 +1435,55 @@ if (isSwitchingToFocusInitial) {
 
           _buildFeaturePageView(),
           FeatureTitleBanner(title: currentFeature.title, backgroundColor: currentFeature.color),
+            // --- Left Navigation Arrow ---
+          if (_currentPage >= 0) // Only show if not the first page
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                // Add some padding from the edge
+                padding: const EdgeInsets.only(left: 8.0),
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.arrow_back_ios_new_rounded, // Or Icons.chevron_left
+                    color: Colors.white,
+                    size: 48.0, // Adjust size as needed
+                  ),
+                  onPressed: _navigateToPreviousPage, // Call the helper method
+                  tooltip: 'Previous Feature',
+                  // Optional: Add background for better visibility
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.black.withOpacity(0.35),
+                    padding: const EdgeInsets.all(10.0),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+                  ),
+                ),
+              ),
+            ),
+
+          // --- Right Navigation Arrow ---
+          if (_currentPage <= _features.length - 1) // Only show if not the last page
+            Align(
+              alignment: Alignment.centerRight,
+              child: Padding(
+                // Add some padding from the edge
+                padding: const EdgeInsets.only(right: 8.0),
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.arrow_forward_ios_rounded, // Or Icons.chevron_right
+                    color: Colors.white,
+                    size: 48.0, // Adjust size as needed
+                  ),
+                  onPressed: _navigateToNextPage, // Call the helper method
+                  tooltip: 'Next Feature',
+                  // Optional: Add background for better visibility
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.black.withOpacity(0.35),
+                    padding: const EdgeInsets.all(10.0),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+                  ),
+                ),
+              ),
+            ),
           _buildSettingsButton(),
           _buildMainActionButton(currentFeature),
         ],
