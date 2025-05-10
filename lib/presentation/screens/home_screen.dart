@@ -131,7 +131,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<String> _featureSpecificTutorialMessages = [];
   bool _isFirstRun = true; // Assume true until checked
   bool _isTutorialSpeaking = false; // To manage TTS during tutorial
-
+  bool _isSkipping = false; 
 
 
 
@@ -260,10 +260,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       "Remember, if you ever need a quick reminder on how to use the feature you're currently on, just tap the question mark button in the top left. To hear this full tutorial again, long-press that same question mark button.",
       "This concludes the main tutorial. We hope Vision Aid empowers you to explore your world with greater confidence. Happy exploring!"
     ];
-
-    // Placeholder for feature-specific messages, will be populated dynamically
-    // Or you can pre-define them here if they are static.
-    // For now, let's make them dynamic based on current feature.
   }
 
   void _initializeFeatures() {
@@ -415,35 +411,66 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         return "Help for this feature is not yet available. Tap the main action button or long press for voice commands.";
     }
   }
+ Future<void> _handleTutorialSkip() async {
+    if (!mounted || !_isTutorialActive || !_isTutorialSpeaking || _isSkipping) return;
+
+    _isSkipping = true; // Set busy flag
+    debugPrint("[Tutorial] Skip handling started. Current step: $_currentTutorialStep");
+
+    await _ttsService.stop();
+    _currentTutorialStep++; 
+
+    if (mounted && _isTutorialActive) { 
+      if (_currentTutorialStep < _tutorialMessages.length) {
+        _isTutorialSpeaking = true; 
+        _playNextTutorialStep();
+      } else {
+        _isTutorialSpeaking = false; 
+        _endTutorial();
+      }
+    }
+
+    if (mounted) {
+      _isSkipping = false; // Reset flag
+    }
+    debugPrint("[Tutorial] Skip handling finished.");
+  }
 
   void _playNextTutorialStep() async {
-    if (!mounted || !_isTutorialActive || !_isTutorialSpeaking) {
-      if (_isTutorialActive) _endTutorial(); // Ensure cleanup if interrupted externally
+    if (!mounted || !_isTutorialActive) {
+      if (_isTutorialActive && mounted) _endTutorial(); 
+      return;
+    }
+
+    if (!_isTutorialSpeaking) {
+      if (_isTutorialActive && mounted) _endTutorial();
       return;
     }
 
     if (_currentTutorialStep >= _tutorialMessages.length) {
-      _endTutorial();
+      _endTutorial(); 
       return;
     }
 
     final message = _tutorialMessages[_currentTutorialStep];
     if (mounted) {
-      setState(() {}); // Update UI to show current tutorial message
+      setState(() {}); 
     }
 
-    await _ttsService.speak(message); // Assumes ttsService.speak awaits completion
+    final int stepForThisCall = _currentTutorialStep;
 
-    if (mounted && _isTutorialActive && _isTutorialSpeaking) { // Check again if still active after speaking
-      _currentTutorialStep++;
-      // Optional: Add a slight delay between steps if desired
-      // await Future.delayed(const Duration(milliseconds: 300));
-      _playNextTutorialStep(); // Recurse for next step
+    await _ttsService.speak(message);
+
+    if (mounted && _isTutorialActive && _isTutorialSpeaking) {
+      if (stepForThisCall == _currentTutorialStep) {
+        _currentTutorialStep++;
+        _playNextTutorialStep(); 
+      }
     } else if (mounted && _isTutorialActive && !_isTutorialSpeaking) {
-        // Means it was stopped (e.g. by user tapping tutorial button again)
-        _endTutorial();
+      _endTutorial();
     }
   }
+
 
   void _endTutorial() {
     if (!mounted) return;
@@ -1842,26 +1869,43 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildTutorialOverlay() {
-    if (!_isTutorialActive || _currentTutorialStep >= _tutorialMessages.length) {
+   Widget _buildTutorialOverlay() {
+    if (!_isTutorialActive || (_tutorialMessages.isEmpty || _currentTutorialStep >= _tutorialMessages.length)) {
+      // If messages are empty or step is out of bounds, don't build.
+      // This can happen if _endTutorial was called and reset _tutorialMessages.
+      if (_isTutorialActive && mounted) { // If still marked active, try to end cleanly.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _isTutorialActive) _endTutorial();
+          });
+      }
       return const SizedBox.shrink();
     }
     final message = _tutorialMessages[_currentTutorialStep];
 
     return Positioned.fill(
-      child: Container(
-        color: Colors.black.withOpacity(0.85),
-        padding: const EdgeInsets.only(top: 150, bottom: 150, left: 30, right: 30), // Adjusted padding
-        child: Center(
-          child: SingleChildScrollView( // Added SingleChildScrollView for long messages
-            child: Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.w600,
-                height: 1.5, // Line height
+      child: GestureDetector( // <--- WRAPPED with GestureDetector
+        onTap: () {
+          // Only allow skipping if the full tutorial is active and speaking.
+          // Do not trigger skip for single-feature help taps.
+          if (_isTutorialActive && _isTutorialSpeaking && _tutorialMessages.length > 1) {
+            _handleTutorialSkip();
+          }
+        },
+        behavior: HitTestBehavior.opaque, // Ensure the whole area is tappable
+        child: Container(
+          color: Colors.black.withOpacity(0.85),
+          padding: const EdgeInsets.only(top: 150, bottom: 150, left: 30, right: 30),
+          child: Center(
+            child: SingleChildScrollView(
+              child: Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w600,
+                  height: 1.5,
+                ),
               ),
             ),
           ),
