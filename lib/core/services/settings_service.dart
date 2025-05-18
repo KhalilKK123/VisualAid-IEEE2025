@@ -1,3 +1,4 @@
+// lib/core/services/settings_service.dart
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 
@@ -19,10 +20,33 @@ const Map<String, String> supportedOcrLanguages = {
   'tel': 'Telugu',
   'kan': 'Kannada',
   'ben': 'Bengali',
-
 };
 
 const String defaultOcrLanguage = 'eng';
+
+
+// --- NEW: Map OCR language codes to TTS BCP 47 language codes ---
+// These are examples and might need adjustment based on actual TTS engine support on devices.
+// It's a good practice to use specific regional codes if known (e.g., en-US, en-GB).
+const Map<String, String> ocrToTtsLanguageMap = {
+  'eng': 'en-US', // English (US)
+  'ara': 'ar-SA', // Arabic (Saudi Arabia) - Check specific device/TTS engine support
+  'fas': 'fa-IR', // Persian (Iran) - Check specific device/TTS engine support
+  'urd': 'ur-PK', // Urdu (Pakistan) - Check specific device/TTS engine support
+  // 'uig': 'ug-CN', // Uyghur - TTS support highly unlikely for common engines, omit or map to fallback
+  'hin': 'hi-IN', // Hindi (India)
+  'mar': 'mr-IN', // Marathi (India)
+  'nep': 'ne-NP', // Nepali (Nepal)
+  'rus': 'ru-RU', // Russian
+  'chi_sim': 'zh-CN', // Chinese (Simplified, China)
+  'chi_tra': 'zh-TW', // Chinese (Traditional, Taiwan) - or zh-HK
+  'jpn': 'ja-JP', // Japanese
+  'kor': 'ko-KR', // Korean
+  'tel': 'te-IN', // Telugu
+  'kan': 'kn-IN', // Kannada
+  'ben': 'bn-IN', // Bengali (India) - or bn-BD for Bangladesh
+};
+// --- END NEW ---
 
 
 const double defaultTtsVolume = 0.8;

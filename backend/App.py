@@ -59,6 +59,8 @@ socketio = SocketIO(
 )
 
 
+#use this link to test the currency https://www.centralbank.ae/en/our-operations/currency-and-coins/circulated-currency/
+
 # --- Tesseract Configuration ---
 try:
     if os.path.exists("/usr/bin/tesseract"):
@@ -156,7 +158,7 @@ with app.app_context():
 # --- Constants ---
 OBJECT_DETECTION_CONFIDENCE = 0.55
 MAX_OBJECTS_TO_RETURN = 4
-CURRENCY_DETECTION_CONFIDENCE = 0.5  # Adjustable confidence for your currency model
+CURRENCY_DETECTION_CONFIDENCE = 0.6  # Adjustable confidence for your currency model
 CURRENCY_MODEL_PATH = "Best.pt"  # Path to your trained currency model
 CURRENCY_CLASS_NAMES_PATH = "aed_class_names.txt" # Path to your class names file
 

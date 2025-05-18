@@ -82,6 +82,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _ttsInitialized = false;
   String _selectedOcrLanguage = SettingsService.getValidatedDefaultLanguage();
   String _selectedObjectCategory = defaultObjectCategory;
+  String? _globalTtsLanguageSetting = 'en-US'; // Default TTS language to revert to. 'en-US' is a fallback.
+
 
   // Detection Results & State (for dedicated pages)
   String _lastObjectResult = "";
@@ -127,7 +129,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool? _hasAmplitudeControl;
 
   
-  
+
   
   
   
@@ -255,6 +257,35 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   // --- Initialization Helper -----------------------------------------------------------------------------------
   Future<void> _initializeApp() async {
     _initializeFeatures();
+
+  // Load OCR lang and TTS V/P/R settings first
+  final initialSettings = await Future.wait([
+    _settingsService.getOcrLanguage(),
+    _settingsService.getTtsVolume(),
+    _settingsService.getTtsPitch(),
+    _settingsService.getTtsRate(),
+    _settingsService.getObjectDetectionCategory(),
+  ]);
+  _selectedOcrLanguage = initialSettings[0] as String;
+  final ttsVolume = initialSettings[1] as double;
+  final ttsPitch = initialSettings[2] as double;
+  final ttsRate = initialSettings[3] as double;
+  _selectedObjectCategory = initialSettings[4] as String;
+
+  if (!_ttsInitialized) {
+    await _ttsService.initTts(
+        initialVolume: ttsVolume,
+        initialPitch: ttsPitch,
+        initialRate: ttsRate);
+    _ttsInitialized = true;
+    // Set initial global TTS language right after TTS init
+    await _ttsService.setSpeechLanguage(_globalTtsLanguageSetting);
+    debugPrint("[TTS Lang] Initial app TTS language set to global: '$_globalTtsLanguageSetting'");
+  } else {
+     // If already initialized, update V,P,R but language is handled by page logic
+    await _ttsService.updateSettings(ttsVolume, ttsPitch, ttsRate);
+  }
+
     await _loadAndInitializeSettings();
     await _checkVibratorAndAmplitude();
     await _prepareAudioPlayers();
@@ -372,32 +403,37 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         "[HomeScreen] Features Initialized: ${_features.map((f) => f.id).toList()}");
   }
 
-  Future<void> _loadAndInitializeSettings() async {
-    final results = await Future.wait([
-      _settingsService.getOcrLanguage(),
-      _settingsService.getTtsVolume(),
-      _settingsService.getTtsPitch(),
-      _settingsService.getTtsRate(),
-      _settingsService.getObjectDetectionCategory(),
-    ]);
-    _selectedOcrLanguage = results[0] as String;
-    final ttsVolume = results[1] as double;
-    final ttsPitch = results[2] as double;
-    final ttsRate = results[3] as double;
-    _selectedObjectCategory = results[4] as String;
+ Future<void> _loadAndInitializeSettings() async {
+  // This function is primarily called when returning from settings.
+  // It re-loads OCR language and TTS V/P/R.
+  // TTS language itself will be re-evaluated based on current page context after this.
+  final results = await Future.wait([
+    _settingsService.getOcrLanguage(),
+    _settingsService.getTtsVolume(),
+    _settingsService.getTtsPitch(),
+    _settingsService.getTtsRate(),
+    _settingsService.getObjectDetectionCategory(),
+  ]);
+  _selectedOcrLanguage = results[0] as String;
+  final ttsVolume = results[1] as double;
+  final ttsPitch = results[2] as double;
+  final ttsRate = results[3] as double;
+  _selectedObjectCategory = results[4] as String;
 
-    if (!_ttsInitialized) {
-      await _ttsService.initTts(
-          initialVolume: ttsVolume,
-          initialPitch: ttsPitch,
-          initialRate: ttsRate);
-      _ttsInitialized = true;
-    } else {
-      await _ttsService.updateSettings(ttsVolume, ttsPitch, ttsRate);
-    }
-    debugPrint(
-        "[HomeScreen] Settings loaded. OCR: $_selectedOcrLanguage, Cat: $_selectedObjectCategory");
+  if (!_ttsInitialized) { // Should not happen if returning from settings, but good for robustness
+    await _ttsService.initTts(
+        initialVolume: ttsVolume,
+        initialPitch: ttsPitch,
+        initialRate: ttsRate);
+    _ttsInitialized = true;
+    await _ttsService.setSpeechLanguage(_globalTtsLanguageSetting); // Set to global if first time
+  } else {
+    await _ttsService.updateSettings(ttsVolume, ttsPitch, ttsRate);
+    // TTS language is NOT set here directly, it will be handled by the calling context
+    // (e.g., in _navigateToSettingsPage's return block)
   }
+  debugPrint("[HomeScreen] Settings loaded/reloaded. OCR: $_selectedOcrLanguage, Cat: $_selectedObjectCategory");
+}
 
   Future<void> _checkVibratorAndAmplitude() async {
     try {
@@ -2006,31 +2042,50 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _navigateToSettingsPage() async {
-    if (!mounted) return;
-    debugPrint("Navigating to Settings...");
-    if (_speechToText.isListening) await _stopListening();
-    if (_ttsInitialized) _ttsService.stop();
-    _stopDetectionTimer();
-    _stopFocusFeedback();
-    final currentFeatureId = _features.isNotEmpty
-        ? _features[_currentPage.clamp(0, _features.length - 1)].id
-        : null;
-    bool isMainCameraPage = currentFeatureId != barcodeScannerFeature.id;
-    if (isMainCameraPage) await _disposeMainCameraController();
-    await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const SettingsScreen()),
-    );
-    if (!mounted) return;
-    debugPrint("Returned from Settings.");
-    await _loadAndInitializeSettings();
-    bool isFocusModeWaitingForObject =
-        _isFocusModeActive && _focusedObject == null;
-    if (isMainCameraPage && !isFocusModeWaitingForObject)
-      await _initializeMainCameraController();
-    _startDetectionTimerIfNeeded();
+ // In _navigateToSettingsPage()
+Future<void> _navigateToSettingsPage() async {
+  if (!mounted) return;
+  debugPrint("Navigating to Settings...");
+  if (_speechToText.isListening) await _stopListening();
+  if (_ttsInitialized) _ttsService.stop();
+  _stopDetectionTimer();
+  _stopFocusFeedback();
+  final currentFeatureId = _features.isNotEmpty
+      ? _features[_currentPage.clamp(0, _features.length - 1)].id
+      : null;
+  bool isMainCameraPage = currentFeatureId != barcodeScannerFeature.id;
+  if (isMainCameraPage) await _disposeMainCameraController();
+  
+  await Navigator.push(
+    context,
+    MaterialPageRoute(builder: (context) => const SettingsScreen()),
+  );
+  
+  if (!mounted) return;
+  debugPrint("Returned from Settings.");
+  
+  // Reload OCR language and TTS V,P,R settings
+  await _loadAndInitializeSettings(); 
+
+  // --- NEW: Adjust TTS language based on current page and new settings ---
+  if (_features[_currentPage].id == textDetectionFeature.id) {
+    final String ocrLang = _selectedOcrLanguage;
+    String? targetTtsLang = ocrToTtsLanguageMap[ocrLang];
+    debugPrint("[TTS Lang] Settings Return (On Text Rec): OCR lang '$ocrLang', mapped TTS lang '$targetTtsLang'. Global: '$_globalTtsLanguageSetting'");
+    await _ttsService.setSpeechLanguage(targetTtsLang ?? _globalTtsLanguageSetting);
+  } else {
+    // If not on text rec page, ensure TTS is set to global default
+    debugPrint("[TTS Lang] Settings Return (Not On Text Rec). Ensuring TTS is global: '$_globalTtsLanguageSetting'");
+    await _ttsService.setSpeechLanguage(_globalTtsLanguageSetting);
   }
+  // --- END NEW ---
+
+  bool isFocusModeWaitingForObject = _isFocusModeActive && _focusedObject == null;
+  if (isMainCameraPage && !isFocusModeWaitingForObject) {
+    await _initializeMainCameraController();
+  }
+  _startDetectionTimerIfNeeded();
+}
 
   void _showPermissionInstructions() {
     if (!mounted) return;
@@ -2084,34 +2139,42 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void _onPageChanged(int index) async {
     if (!mounted) return;
     final newPageIndex = index.clamp(0, _features.length - 1);
-    if (newPageIndex >= _features.length) return; // Should not happen
+    // Ensure newPageIndex is valid (already clamped, but good for clarity if features list could be empty during an edge case)
+    if (newPageIndex >= _features.length) {
+         debugPrint("[Navigation Error] newPageIndex $newPageIndex is out of bounds for features list length ${_features.length}.");
+        return; 
+    }
 
-    // --- CAPTURE PREVIOUS INDEX BEFORE ANY STATE CHANGE (Robustness Improvement) ---
     final int previousPageIndex = _currentPage;
-    // --- --- --- --- --- --- --- --- --- --- --- --- ---
-
+    
     // Prevent redundant calls if the index hasn't actually changed
-    if (previousPageIndex == newPageIndex) return;
+    if (previousPageIndex == newPageIndex) {
+      debugPrint("[Navigation] Attempted to navigate to the same page ($newPageIndex). Skipping _onPageChanged logic.");
+      return;
+    }
 
-    // Ensure indices are valid before proceeding
+    // Validate previousPageIndex before using it to access _features list
     if (previousPageIndex < 0 || previousPageIndex >= _features.length) {
-      debugPrint(
-          "[Navigation Error] Invalid previousPageIndex: $previousPageIndex");
-      return; // Avoid proceeding with invalid state
+      debugPrint("[Navigation Error] Invalid previousPageIndex: $previousPageIndex. Current new is $newPageIndex.");
+      // Attempt to recover by setting current page and letting UI rebuild.
+      // Avoids crashing on _features[previousPageIndex]
+      _currentPage = newPageIndex; 
+      if (mounted) setState(() {});
+      // It might be better to speak the new feature title here if recovery is simple.
+      // For now, just recover state and return.
+      return; 
     }
 
     if (_isTutorialActive) {
-      debugPrint(
-          "[Tutorial] Page changed during active tutorial. Ending tutorial.");
-      await _ttsService.stop(); // Stop TTS immediately
-      _isTutorialSpeaking = false; // Signal to stop iteration
-      _endTutorial(); // Perform cleanup
+      debugPrint("[Tutorial] Page changed during active tutorial. Ending tutorial.");
+      await _ttsService.stop(); 
+      _isTutorialSpeaking = false; 
+      _endTutorial(); 
     }
 
     final previousFeature = _features[previousPageIndex];
     final newFeature = _features[newPageIndex];
-    debugPrint(
-        "[Navigation] Page changed from ${previousFeature.id} (idx $previousPageIndex) to ${newFeature.id} (idx $newPageIndex)");
+    debugPrint("[Navigation] Page changed from ${previousFeature.id} (idx $previousPageIndex) to ${newFeature.id} (idx $newPageIndex)");
 
     // Stop ongoing activities FIRST
     if (_ttsInitialized) _ttsService.stop();
@@ -2119,122 +2182,92 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _stopFocusFeedback();
     if (previousFeature.id == hazardDetectionFeature.id) _clearHazardAlert();
 
+    // --- TTS Language Management on Page Change ---
+    if (_ttsInitialized) { // Ensure TTS service is ready
+      if (newFeature.id == textDetectionFeature.id) {
+        final String ocrLang = _selectedOcrLanguage; 
+        String? targetTtsLang = ocrToTtsLanguageMap[ocrLang];
+        debugPrint("[TTS Lang] Navigating TO Text Rec Page: OCR lang '$ocrLang', mapped TTS lang '$targetTtsLang'. Global TTS: '$_globalTtsLanguageSetting'");
+        await _ttsService.setSpeechLanguage(targetTtsLang ?? _globalTtsLanguageSetting);
+      }
+      // When navigating FROM Text Recognition page to a DIFFERENT page
+      else if (previousFeature.id == textDetectionFeature.id && newFeature.id != textDetectionFeature.id) {
+        debugPrint("[TTS Lang] Navigating FROM Text Rec Page. Reverting TTS to global: '$_globalTtsLanguageSetting'");
+        await _ttsService.setSpeechLanguage(_globalTtsLanguageSetting);
+      }
+      // If navigating between non-text pages, or from a non-text page to another non-text page,
+      // ensure the global TTS language is active. This also handles the first page load if it's not Text Rec.
+      else if (newFeature.id != textDetectionFeature.id) {
+         debugPrint("[TTS Lang] Navigating to/between NON-Text Rec pages. Ensuring global TTS: '$_globalTtsLanguageSetting'");
+         await _ttsService.setSpeechLanguage(_globalTtsLanguageSetting);
+      }
+    }
+    // --- END TTS Language Management ---
+
     bool wasFocusMode = _isFocusModeActive;
     _isFocusModeActive = newFeature.id == focusModeFeature.id;
 
-    // --- UPDATE _currentPage STATE SYNCHRONOUSLY (Robustness Improvement) ---
-    _currentPage = newPageIndex;
-    // --- --- --- --- --- --- --- --- --- --- --- ---
+    _currentPage = newPageIndex; // Update current page state
+    if (mounted) setState(() {}); else return; // Rebuild UI with new page context
 
-    // --- Perform setState EARLY (Robustness Improvement / User Preference) ---
-    // This triggers the UI rebuild process. Subsequent async operations might complete after this.
-    if (mounted)
-      setState(() {});
-    else
-      return;
-    // --- --- --- --- --- --- --- --- --- --- --- ---
-
-    // --- Camera Transitions (Integrating User Logic) ---
+    // --- Camera Transitions ---
     bool isSwitchingToBarcode = newFeature.id == barcodeScannerFeature.id;
-    // Focus Initial: Entering focus mode AND object is null
-    bool isSwitchingToFocusInitial = _isFocusModeActive &&
-        _focusedObject == null &&
-        newFeature.id == focusModeFeature.id;
-    bool isSwitchingFromBarcode =
-        previousFeature.id == barcodeScannerFeature.id;
-    // Switching From Focus: Was focus mode AND (is no longer focus mode OR focus object is now set)
-    // Let's stick to the user's simpler definition for now: was focus mode AND is no longer focus mode
+    bool isSwitchingToFocusInitial = _isFocusModeActive && _focusedObject == null && newFeature.id == focusModeFeature.id;
+    bool isSwitchingFromBarcode = previousFeature.id == barcodeScannerFeature.id;
     bool isSwitchingFromFocus = wasFocusMode && !_isFocusModeActive;
 
-    debugPrint(
-        "[Nav] CamLogic: ToBarcode=$isSwitchingToBarcode, ToFocusInitial=$isSwitchingToFocusInitial, FromBarcode=$isSwitchingFromBarcode, FromFocus=$isSwitchingFromFocus");
+    debugPrint("[Nav] CamLogic: ToBarcode=$isSwitchingToBarcode, ToFocusInitial=$isSwitchingToFocusInitial, FromBarcode=$isSwitchingFromBarcode, FromFocus=$isSwitchingFromFocus");
 
-    // --- User's TTS Logic for Focus Initial ---
-    // This specific block handles the TTS prompt *before* disposal when switching to focus initial state.
-    // We keep the `await` on dispose here because the TTS likely needs to happen first.
     if (isSwitchingToFocusInitial) {
       if (_cameraController != null || _isMainCameraInitializing) {
-        debugPrint(
-            "[Nav] Switching TO initial focus - Speaking TTS then disposing main camera...");
-        if (_ttsInitialized)
-          await _ttsService.speak(
-              "Object finder. Tap the button, then say the object name."); // Speak first
-        await _disposeMainCameraController(); // Then dispose (awaited)
+        debugPrint("[Nav] Switching TO initial focus - Speaking TTS then disposing main camera...");
+        // TTS for focus prompt uses current language (which would be global or OCR lang if coming from TextRec)
+        if (_ttsInitialized) await _ttsService.speak("Object finder. Tap the button, then say the object name.");
+        await _disposeMainCameraController(); 
         debugPrint("[Nav] Main camera disposed after TTS for focus.");
       } else {
-        // Camera is already null/not initializing, just speak the prompt
-        if (_ttsInitialized)
-          await _ttsService.speak(
-              "Object finder. Tap the button, then say the object name.");
+        if (_ttsInitialized) await _ttsService.speak("Object finder. Tap the button, then say the object name.");
       }
     }
-    // --- End User's TTS Logic ---
-
-    // --- General Disposal Logic (excluding the focus initial case handled above) ---
-    // Handles switching TO barcode. We make disposal async here.
     else if (isSwitchingToBarcode) {
       if (_cameraController != null || _isMainCameraInitializing) {
-        debugPrint(
-            "[Nav] Switching TO barcode - disposing main camera (async)...");
+        debugPrint("[Nav] Switching TO barcode - disposing main camera (async)...");
         _disposeMainCameraController(); // Dispose without awaiting
       }
     }
-    // --- End General Disposal Logic ---
-
-    // --- Initialization Logic (Including User's Double Init) ---
-    // Handles switching FROM barcode or FROM focus mode (when it's not focus initial anymore)
     else if (isSwitchingFromBarcode || isSwitchingFromFocus) {
-      bool newPageNeedsCamera = newFeature.id != barcodeScannerFeature.id &&
-          !isSwitchingToFocusInitial; // Double check target isn't focus initial
+      bool newPageNeedsCamera = newFeature.id != barcodeScannerFeature.id && !isSwitchingToFocusInitial; 
       if (newPageNeedsCamera) {
-        debugPrint(
-            "[Nav] Switching FROM barcode/focus TO page needing camera (${newFeature.id}) - Applying User's Double Initialization...");
-        // --- User's Double Initialization Workaround ---
-        await Future.delayed(const Duration(milliseconds: 200));
-        _initializeMainCameraController(); // First call
-        _initializeMainCameraController(); // Second call
-        if (mounted)
-          setState(() {}); // User's explicit setState after double init
-        debugPrint("[Nav] Double camera initialization complete.");
-        // --- End User's Workaround ---
+        debugPrint("[Nav] Switching FROM barcode/focus TO page needing camera (${newFeature.id}) - Ensuring camera init...");
+        await Future.delayed(const Duration(milliseconds: 200)); // Short delay before re-init
+        _initializeMainCameraController(); 
+         // _initializeMainCameraController(); // Second call if you find it necessary
+        if (mounted) setState(() {}); 
+        debugPrint("[Nav] Camera initialization for ${newFeature.id} complete/triggered.");
       }
     }
-    // --- End Initialization Logic ---
-
-    // --- Handle transitions between other pages needing camera ---
-    else {
-      bool newPageNeedsCamera = newFeature.id != barcodeScannerFeature.id &&
-          !isSwitchingToFocusInitial;
-      // Check if camera is needed AND (it's null OR it's currently initializing - avoid triggering if already good)
-      if (newPageNeedsCamera &&
-          (_cameraController == null ||
-              !_cameraController!.value.isInitialized) &&
+    else { // Transitions between other pages that might need camera
+      bool newPageNeedsCamera = newFeature.id != barcodeScannerFeature.id && !isSwitchingToFocusInitial;
+      // If new page needs camera AND (it's null OR not initialized) AND not currently initializing
+      if (newPageNeedsCamera && 
+          (_cameraController == null || !_cameraController!.value.isInitialized) && 
           !_isMainCameraInitializing) {
-        debugPrint(
-            "[Nav] Other transition: Page ${newFeature.id} needs camera, ensuring it's initialized (async).");
-        _initializeMainCameraController(); // Initialize without awaiting
-        _initializeMainCameraController(); // Second call
-        setState(() {}); // User's explicit setState after double init
-        // if(mounted) setState(() {}); // User's explicit setState after double init
+        debugPrint("[Nav] Other transition: Page ${newFeature.id} needs camera, ensuring it's initialized.");
+        _initializeMainCameraController(); 
+       _initializeMainCameraController(); // Second call if needed
+        if (mounted) setState(() {}); 
       }
     }
     // --- End Camera Transitions ---
 
     // --- Clear Previous Page Results & Reset State ---
-    // It's generally safer to clear state *after* potentially long async operations
-    // like camera init/dispose have at least been initiated.
     if (mounted) {
       setState(() {
         _isProcessingImage = false;
         _lastRequestedFeatureId = null;
-        if (previousFeature.id == objectDetectionFeature.id)
-          _lastObjectResult = "";
-        // Hazard clear already happened earlier based on feature ID
-        else if (previousFeature.id == sceneDetectionFeature.id ||
-            previousFeature.id == textDetectionFeature.id)
-          _lastSceneTextResult = "";
-        else if (previousFeature.id == currencyDetectionFeature.id)
-          _lastCurrencyResult = "";
+        if (previousFeature.id == objectDetectionFeature.id) _lastObjectResult = "";
+        else if (previousFeature.id == sceneDetectionFeature.id || previousFeature.id == textDetectionFeature.id) _lastSceneTextResult = "";
+        else if (previousFeature.id == currencyDetectionFeature.id) _lastCurrencyResult = "";
 
         if (previousFeature.id == supervisionFeature.id) {
           _isSupervisionProcessing = false;
@@ -2243,11 +2276,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           _supervisionHazardName = "";
           _supervisionIsHazardActive = false;
         }
-        // Only reset Focus state variables if truly LEAVING focus mode.
-        // Don't reset if just selecting an object *within* focus mode.
-        if (isSwitchingFromFocus) {
-          debugPrint(
-              "[Nav] Resetting Focus state variables as we are leaving Focus Mode.");
+        if (isSwitchingFromFocus) { // Only reset focus state if truly leaving focus mode
+          debugPrint("[Nav] Resetting Focus state variables as we are leaving Focus Mode.");
           _focusedObject = null;
           _isFocusPromptActive = false;
           _isFocusObjectDetectedInFrame = false;
@@ -2257,22 +2287,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         }
       });
     } else {
-      return;
+      return; // Widget unmounted, abort
     }
     // --- End Clear State ---
 
     // --- Final Page Setup ---
     // Announce New Feature Title (if not focus initial, as that already announced)
+    // This will use the TTS language set just above (OCR lang for TextRec, global for others).
     if (_ttsInitialized && !isSwitchingToFocusInitial) {
       _ttsService.speak(newFeature.title);
     }
 
     // Setup Focus Prompt (if entering focus initial state)
-    // Note: TTS prompt was handled earlier in this specific case.
     if (isSwitchingToFocusInitial) {
       if (mounted) {
         setState(() {
-          _isFocusPromptActive = true; // Show prompt UI element
+          _isFocusPromptActive = true; 
           _isFocusObjectDetectedInFrame = false;
           _isFocusObjectCentered = false;
           _currentProximity = 0.0;
@@ -2280,12 +2310,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         });
       }
       _stopFocusFeedback(); // Ensure feedback is off initially
-      debugPrint(
-          "[Focus] Entered Focus Mode Initial State (Object prompt active).");
+      debugPrint("[Focus] Entered Focus Mode Initial State (Object prompt active).");
     }
-    // Start Detection Timer if applicable for the new page
-    else {
-      // Applies to ObjectDetection, HazardDetection, FocusMode (once object selected)
+    else { // Applies to ObjectDetection, HazardDetection, FocusMode (once object selected)
       _startDetectionTimerIfNeeded();
     }
     // --- End Final Page Setup ---

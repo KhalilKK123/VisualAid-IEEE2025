@@ -1,3 +1,4 @@
+// lib/core/services/tts_service.dart
 import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -11,6 +12,7 @@ class TtsService {
   double volume = 0.8;
   double pitch = 1.0;
   double rate = 0.5;
+  // String? _currentLanguage; // To store the currently set language
 
   TtsState ttsState = TtsState.stopped;
 
@@ -26,10 +28,12 @@ class TtsService {
     double initialVolume = 0.8,
     double initialPitch = 1.0,
     double initialRate = 0.5,
+    // String? initialLanguage, // Optional: if you want to set an initial language directly
   }) async {
     volume = initialVolume.clamp(0.0, 1.0);
     pitch = initialPitch.clamp(0.5, 2.0);
     rate = initialRate.clamp(0.0, 1.0);
+    // _currentLanguage = initialLanguage;
 
     flutterTts = FlutterTts();
 
@@ -66,6 +70,9 @@ class TtsService {
     });
 
     await applySettings();
+    // if (_currentLanguage != null) {
+    //   await setSpeechLanguage(_currentLanguage!);
+    // }
     debugPrint("[TtsService] TTS Initialized with V:$volume, P:$pitch, R:$rate");
   }
 
@@ -74,6 +81,7 @@ class TtsService {
         await flutterTts.setVolume(volume);
         await flutterTts.setSpeechRate(rate);
         await flutterTts.setPitch(pitch);
+        // Language is set via setSpeechLanguage now
      } catch (e) {
         debugPrint("[TtsService] Error applying settings: $e");
      }
@@ -84,13 +92,40 @@ class TtsService {
     volume = newVolume.clamp(0.0, 1.0);
     pitch = newPitch.clamp(0.5, 2.0);
     rate = newRate.clamp(0.0, 1.0);
-    await applySettings();
+    await applySettings(); // This will apply V, P, R. Language is separate.
     debugPrint("[TtsService] Settings Updated V:$volume, P:$pitch, R:$rate");
   }
 
+  // --- NEW METHOD to set TTS language ---
+  Future<void> setSpeechLanguage(String? languageCode) async {
+    // If languageCode is null, it implies resetting to a global/device default.
+    // We'll handle the specific default (e.g., 'en-US') in HomeScreen.
+    // If flutter_tts.setLanguage(null) is problematic, HomeScreen will pass 'en-US'.
+    String effectiveLanguageCode = languageCode ?? 'en-US'; // Fallback to en-US if null is intended for "default"
+
+    try {
+      await flutterTts.setLanguage(effectiveLanguageCode);
+      // _currentLanguage = effectiveLanguageCode; // Store the last set language
+      debugPrint("[TtsService] Speech language set to: $effectiveLanguageCode");
+    } catch (e) {
+      debugPrint("[TtsService] Error setting speech language to $effectiveLanguageCode: $e");
+      // Optionally, try to set to a very basic default if the target one failed
+      if (effectiveLanguageCode != 'en-US') { // Avoid infinite loop if en-US itself fails
+        try {
+          await flutterTts.setLanguage('en-US');
+          // _currentLanguage = 'en-US';
+           debugPrint("[TtsService] Fallback: Speech language set to: en-US due to previous error.");
+        } catch (e2) {
+            debugPrint("[TtsService] Error setting speech language to fallback en-US: $e2");
+        }
+      }
+    }
+  }
+  // --- END NEW METHOD ---
+
   Future<void> speak(String text) async {
     if (text.isNotEmpty && ttsState != TtsState.playing) {
-       await applySettings();
+       await applySettings(); // Ensures V,P,R are current. Language is assumed to be set.
        await flutterTts.speak(text);
     } else if (ttsState == TtsState.playing) {
         await stop();
