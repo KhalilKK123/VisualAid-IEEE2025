@@ -7,7 +7,7 @@ import 'package:socket_io_client/socket_io_client.dart' as io;
 
 class WebSocketService {
   // Ensure this URL points to your backend server IP/domain and port
-  final String _serverUrl = 'http://xyz:5000'; // Using server URL
+  final String _serverUrl = 'http://192.168.70.126:5000'; // Using server URL
   // Example: final String _serverUrl = 'http://your-backend-domain.com';
 
   io.Socket? _socket;

@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert'; // For json decoding in websocket handler (if needed)
 import 'dart:math'; // For proximity calculation
-import 'package:ai_visualaid_frontend/features/currency_detection%20/%20presentation%20/%20pages/currency_detection.dart';
+
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:speech_to_text/speech_to_text.dart';
@@ -20,6 +20,7 @@ import '../../core/services/tts_service.dart';
 import '../../core/services/barcode_api_service.dart';
 
 import '../../features/feature_registry.dart';
+import '../../features/currency_detection/presentation/pages/currency_detection.dart';
 import '../../features/object_detection/presentation/pages/object_detection_page.dart';
 import '../../features/hazard_detection/presentation/pages/hazard_detection_page.dart';
 import '../../features/scene_detection/presentation/pages/scene_detection_page.dart';
@@ -34,6 +35,18 @@ import '../widgets/action_button.dart';
 
 import 'settings_screen.dart';
 // --- Imports End -----------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
 
 class HomeScreen extends StatefulWidget {
   final CameraDescription? camera;
@@ -113,6 +126,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _hasVibrator = false;
   bool? _hasAmplitudeControl;
 
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   // --- Constants ------------------------------------------------------------------------------------------
   static const String _alertSoundPath = "audio/alert.mp3";
   static const String _beepSoundPath = "assets/audio/short_beep.mp3";
@@ -153,6 +176,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   static const String _hasRunBeforeKey =
       'has_run_before'; // to check if run before
 
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   // --- Tutorial State Variables ---
   bool _isTutorialActive = false;
   int _currentTutorialStep = 0;
@@ -207,6 +242,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   // --- Initialization Helper -----------------------------------------------------------------------------------
   Future<void> _initializeApp() async {
     _initializeFeatures();
@@ -266,26 +311,56 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   void _initializeTutorialContent() {
     _tutorialMessages = [
-      "Welcome to Vision Aid. This app is designed to help you understand your surroundings using your phone's camera and advanced analysis.",
-      "Let's quickly go over the app's interface. At the top, you'll see the title of the currently selected feature, like 'Object Detection'.",
-      "At the bottom center is the main action button. For features like Text Recognition or Scene Description, tapping this button will capture an image and process it. Long-pressing this button activates voice commands, allowing you to switch features or change settings by speaking.",
-      "On the left and right edges of the screen, you'll find arrow buttons. You can tap these to navigate to the previous or next feature. You can also swipe left or right anywhere on the screen to change features.",
-      "In the top right corner, the gear icon opens the settings screen. Here, you can adjust voice speed, language for text recognition, and object detection filters. you can also chnage the object detection filters to filter what types of objects are detected, uisng voice commands, just hold the main action button and say the phrase \" category \" then name your category.",
-      "And in the top left corner, you'll see a question mark icon. That's the tutorial button! Tap it anytime for a quick explanation of the current feature. Long-press it to replay this full tutorial.",
+      "Welcome to Vision Aid.",
+      "This app is designed to help you understand your surroundings using your phone's camera and advanced analysis.",
+      "Let's quickly go over the app's interface.",
+      "At the top, you'll see the title of the currently selected feature, like 'Object Detection'.",
+      "At the bottom center is the main action button.",
+      "For features like Text Recognition or Scene Description, tapping this button will capture an image and process it.",
+      "Long-pressing this button activates voice commands, allowing you to switch features or change settings by speaking.",
+      "On the left and right edges of the screen, you'll find arrow buttons.",
+      "You can tap these to navigate to the previous or next feature.",
+      "You can also swipe left or right anywhere on the screen to change features.",
+      "In the top right corner, the gear icon opens the settings screen.",
+      "Here, you can adjust voice speed, language for text recognition, and object detection filters.",
+      "You can also change the object detection filters to filter what types of objects are detected using voice commands.",
+      "To do this, just hold the main action button and say the phrase 'category' then name your category.",
+      "And in the top left corner, you'll see a question mark icon.",
+      "That's the tutorial button!",
+      "Tap it anytime for a quick explanation of the current feature.",
+      "Long-press it to replay this full tutorial.",
       "Vision Aid offers several powerful features. Let's explore them.",
-      "SuperVision: This is our middleware feature, for your convenience. When on the SuperVision page, tap the main action button. It analyzes the camera view using AI, and, based on the analysis, it might include identifying objects, describing the scene, reading text, or even alerting you to hazards it finds.",
-      "Object Detection: This feature works in real-time. As you point your phone around, it will continuously identify and announce objects it sees. You can filter what types of objects are detected in the settings menu.",
-      "Hazard Detection: This feature also works in real-time to alert you to potential hazards, such as cars or specific items that could be dangerous. If a hazard is detected, the app will make a sound and vibrate.",
-      "Object Finder: First, tap the main action button. The app will ask you to say the name of the object you want to find. After you say the object's name, the app will use sound and vibration to help guide you towards it as it's detected in the camera's view.",
-      "Scene Description: Point your phone towards an area you want to understand better, then tap the main action button. The app will process the image and describe the scene to you.",
-      "Text Recognition: If you want to read text from a document, sign, or product, point your phone at the text and tap the main action button. The app will read the detected text aloud. You can change the language for text recognition in the settings.",
-      "Barcode Scanner: This feature activates automatically when you navigate to its page. Simply point your camera at a barcode. The app will scan it and, if the product is in its database, tell you the product information.",
+      "SuperVision: This is our middleware feature, for your convenience.",
+      "When on the SuperVision page, tap the main action button.",
+      "It analyzes the camera view using AI.",
+      "Based on the analysis, it might include identifying objects, describing the scene, reading text, or even alerting you to hazards it finds.",
+      "Object Detection: This feature works in real-time.",
+      "As you point your phone around, it will continuously identify and announce objects it sees.",
+      "You can filter what types of objects are detected in the settings menu.",
+      "Hazard Detection: This feature also works in real-time to alert you to potential hazards, such as cars or specific items that could be dangerous.",
+      "If a hazard is detected, the app will make a sound and vibrate.",
+      "Object Finder: First, tap the main action button.",
+      "The app will ask you to say the name of the object you want to find.",
+      "After you say the object's name, the app will use sound and vibration to help guide you towards it as it's detected in the camera's view.",
+      "Scene Description: Point your phone towards an area you want to understand better, then tap the main action button.",
+      "The app will process the image and describe the scene to you.",
+      "Text Recognition: If you want to read text from a document, sign, or product, point your phone at the text and tap the main action button.",
+      "The app will read the detected text aloud.",
+      "You can change the language for text recognition in the settings.",
+      "Barcode Scanner: This feature activates automatically when you navigate to its page.",
+      "Simply point your camera at a barcode.",
+      "The app will scan it and, if the product is in its database, tell you the product information.",
       "To navigate between these features, you have a few options.",
       "You can swipe left or right anywhere on the main part of the screen.",
       "You can tap the large arrow buttons that appear on the left and right sides of the screen.",
-      "Or, you can use voice commands. Long-press the main action button at the bottom, wait for the prompt, and then say the feature name like 'object detection', 'go to page 3', or 'barcode scanner'. You can also say 'settings' to go to the settings page.",
-      "Remember, if you ever need a quick reminder on how to use the feature you're currently on, just tap the question mark button in the top left. To hear this full tutorial again, long-press that same question mark button.",
-      "This concludes the main tutorial. We hope Vision Aid empowers you to explore your world with greater confidence. Happy exploring!"
+      "Or, you can use voice commands.",
+      "Long-press the main action button at the bottom, wait for the prompt, and then say the feature name like 'object detection', 'go to page 3', or 'barcode scanner'.",
+      "You can also say 'settings' to go to the settings page.",
+      "Remember, if you ever need a quick reminder on how to use the feature you're currently on, just tap the question mark button in the top left.",
+      "To hear this full tutorial again, long-press that same question mark button.",
+      "This concludes the main tutorial.",
+      "We hope Vision Aid empowers you to explore your world with greater confidence.",
+      "Happy exploring!"
     ];
   }
 
@@ -350,6 +425,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       debugPrint("[HomeScreen] Error preparing audio players: $e");
     }
   }
+
+
+
+
+
+
+
+
+
+
 
 // --- Tutorial Logic ---
 
@@ -447,7 +532,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       case 'text_detection':
         return "Text Recognition: Point your camera at the text you want to read, then tap the main action button. The app will detect and read the text aloud. Change OCR language in settings. Long press for voice commands.";
       case 'currency_detection':
-        return "temp - currency";
+        return "Currency Detection: Point your camera at the currency you want detected, then tap the main action button. The app will detect and announce the currency. Long press for voice commands.";
       case 'barcode_scanner':
         return "Barcode Scanner: This activates automatically on this page. Point your camera at a barcode to scan it. The app will announce product information if found. No button tap needed for scanning.";
       default:
@@ -539,6 +624,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   // --- End Tutorial Logic ---
 
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   // --- Lifecycle Event Handlers -----------------------------------------------------------------------------------
   void _handleAppPause() {
     debugPrint("[Lifecycle] App inactive/paused - Cleaning up...");
@@ -586,6 +681,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _startDetectionTimerIfNeeded();
     }
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   // --- Camera Management ---
   Future<void> _disposeMainCameraController() async {
@@ -736,7 +845,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  // --- WebSocket Handling ---
+
+
+
+
+
+
+
+
+
+
+
+// --- WebSocket Handling ---
   void _initializeWebSocket() {
     debugPrint("[HomeScreen] Initializing WebSocket listener...");
     _webSocketService.responseStream.listen(_handleWebSocketData,
@@ -797,9 +917,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         _supervisionIsHazardActive = false; // Clear previous
         String textToSpeak = "";
 
-        // Helpers adapted from _process<Feature>Detection methods
-        // These now directly update _supervisionDisplayResult and build textToSpeak
-
         if (actualFeatureIdFromSupervision == objectDetectionFeature.id) {
           final odResult =
               _processSupervisionObjectDetectionResult(resultTextRaw);
@@ -807,8 +924,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           textToSpeak = odResult['speak']
               ? odResult['speakText']
               : "Object detection complete.";
-
-          // Check for hazards within these object detections
           List<String> detectedObjectsList = resultTextRaw.isNotEmpty &&
                   !resultTextRaw.startsWith("Error") &&
                   resultTextRaw != "No objects detected"
@@ -818,15 +933,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   .map((e) => e.trim())
                   .toList()
               : [];
-          String hazardNameFromOD = _processHazardDetection(
-              detectedObjectsList); // Uses Backend's main hazard logic
+          String hazardNameFromOD = _processHazardDetection(detectedObjectsList); 
           if (hazardNameFromOD.isNotEmpty) {
-            _supervisionHazardName =
-                hazardNameFromOD; // Set for SuperVisionPage display
-            _supervisionIsHazardActive =
-                _isHazardAlertActive; // Reflect main alert state
-            // TTS for hazard handled by _triggerHazardAlert, avoid double speaking here
-            // textToSpeak += ". Hazard: ${hazardNameFromOD.replaceAll('_', ' ')}";
+            _supervisionHazardName = hazardNameFromOD; 
+            _supervisionIsHazardActive = _isHazardAlertActive; 
           }
         } else if (actualFeatureIdFromSupervision ==
             hazardDetectionFeature.id) {
@@ -839,15 +949,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   .map((e) => e.trim())
                   .toList()
               : [];
-          String hazardName = _processHazardDetection(
-              detectedObjectsList); // Main hazard logic triggers alert & TTS
+          String hazardName = _processHazardDetection(detectedObjectsList); 
           _supervisionHazardName = hazardName;
           _supervisionIsHazardActive = _isHazardAlertActive;
           _supervisionDisplayResult = hazardName.isNotEmpty
               ? hazardName.replaceAll('_', ' ')
               : "No direct hazards detected by SuperVision.";
           textToSpeak = hazardName.isNotEmpty
-              ? ""
+              ? "" 
               : "Hazard scan complete. No critical hazards identified by SuperVision.";
         } else if (actualFeatureIdFromSupervision == sceneDetectionFeature.id) {
           final sceneResult = _processSupervisionSceneResult(resultTextRaw);
@@ -862,9 +971,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ? textResult['speakText']
               : "Text analysis complete.";
         } else if (actualFeatureIdFromSupervision ==
-            currencyDetectionFeature.id) {
+            currencyDetectionFeature.id) { // Updated for currency
           final currencyResult =
-              _processSupervisionCurrencyResult(resultTextRaw);
+              _processSupervisionCurrencyResult(resultTextRaw); // This function expects a string resultTextRaw
           _supervisionDisplayResult = currencyResult['display'];
           textToSpeak = currencyResult['speak']
               ? currencyResult['speakText']
@@ -883,16 +992,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               "[HomeScreen] SuperVision unhandled feature ID: $actualFeatureIdFromSupervision, data: $resultTextRaw");
         }
 
-        // Speak the combined result from SuperVision, carefully to avoid double-speaking hazards
         if (_ttsInitialized && textToSpeak.isNotEmpty) {
           bool hazardWasSpokenByAlert =
               (_supervisionHazardName.isNotEmpty && _isHazardAlertActive);
           if (!hazardWasSpokenByAlert) {
             _ttsService.speak(textToSpeak);
           } else if (textToSpeak != "") {
-            // Speak non-hazard part if any
             String nonHazardPart = textToSpeak;
-            // Attempt to remove hazard announcement from textToSpeak if it was already said
             if (_supervisionHazardName.isNotEmpty) {
               nonHazardPart = nonHazardPart
                   .replaceAll(
@@ -913,19 +1019,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               _ttsService.speak(nonHazardPart);
           }
         }
-        _isProcessingImage = false; // Reset general processing flag
+        _isProcessingImage = false; 
         _lastRequestedFeatureId = null;
       });
     } else if (data.containsKey('result') &&
         data['result'] is Map<String, dynamic>) {
-      // --- Handle Direct/Focus Mode Result ---
       final Map<String, dynamic> resultData = data['result'];
       final String status = resultData['status'] ?? 'error';
       final String? receivedForFeatureId = _lastRequestedFeatureId;
 
-      _processFeatureResult(
-          receivedForFeatureId, status, resultData); // P1's original logic
-      _isProcessingImage = false; // Reset general processing flag
+      _processFeatureResult(receivedForFeatureId, status, resultData);
+      _isProcessingImage = false; 
       _lastRequestedFeatureId = null;
     } else {
       debugPrint('[HomeScreen] Received unexpected WS data format: $data');
@@ -936,20 +1040,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  // Processes results for dedicated feature pages (Object, Scene, Text, Currency) and Focus Mode
-  // This is primarily Backend's logic.
   void _processFeatureResult(
       String? featureId, String status, Map<String, dynamic> resultData) {
     if (!mounted) return;
 
-    // Hazard check for object detection results on its dedicated page
     if (featureId == objectDetectionFeature.id && status == 'ok') {
-      List<String> currentDetections = (resultData['detections']
-                  as List<dynamic>?)
-              ?.map((d) => (d as Map<String, dynamic>)['name'] as String? ?? '')
-              .where((name) => name.isNotEmpty)
-              .toList() ??
-          [];
+      // List<String> currentDetections = (resultData['detections']
+      //             as List<dynamic>?)
+      //         ?.map((d) => (d as Map<String, dynamic>)['name'] as String? ?? '')
+      //         .where((name) => name.isNotEmpty)
+      //         .toList() ??
+      //     [];
       //  _processHazardDetection(currentDetections); // This will trigger alerts if needed
     } else if (featureId == hazardDetectionFeature.id && status == 'ok') {
       List<String> currentDetections = (resultData['detections']
@@ -962,16 +1063,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
 
     setState(() {
-      // --- Handle Focus Mode Results ---
       if (_isFocusModeActive && featureId == focusModeFeature.id) {
-        // Ensure featureId matches for focus
         if (status == 'found') {
           final detection = resultData['detection'] as Map<String, dynamic>?;
           final String detectedName =
               (detection?['name'] as String?)?.toLowerCase() ?? "null";
           final String targetName = _focusedObject?.toLowerCase() ?? "null";
-          debugPrint(
-              "[Focus] Received detection: '$detectedName'. Target: '$targetName'. Status: '$status'");
+          debugPrint("[Focus] Received detection: '$detectedName'. Target: '$targetName'. Status: '$status'");
           if (detection != null && detectedName == targetName) {
             final double centerX = detection['center_x'] as double? ?? 0.5;
             final double centerY = detection['center_y'] as double? ?? 0.5;
@@ -979,37 +1077,31 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             final double dy = centerY - 0.5;
             final double dist = sqrt(dx * dx + dy * dy);
             _currentProximity = (1.0 - (dist / 0.707)).clamp(0.0, 1.0);
-            debugPrint(
-                "[Focus] Target '$targetName' found. Prox: ${_currentProximity.toStringAsFixed(3)}");
+            debugPrint("[Focus] Target '$targetName' found. Prox: ${_currentProximity.toStringAsFixed(3)}");
             _isFocusObjectDetectedInFrame = true;
             _isFocusObjectCentered = dist < _focusCenterThreshold;
 
             if (_isFocusObjectCentered && !_announcedFocusFound) {
-              if (_ttsInitialized)
-                _ttsService.speak("${_focusedObject ?? 'Object'} found!");
+              if (_ttsInitialized) _ttsService.speak("${_focusedObject ?? 'Object'} found!");
               _announcedFocusFound = true;
               Future.delayed(_focusFoundAnnounceCooldown, () {
                 if (mounted) _announcedFocusFound = false;
               });
             }
           } else {
-            debugPrint(
-                "[Focus] Detected '$detectedName' != target '$targetName'. Resetting.");
+            debugPrint("[Focus] Detected '$detectedName' != target '$targetName'. Resetting.");
             _currentProximity = 0.0;
             _isFocusObjectDetectedInFrame = false;
             _isFocusObjectCentered = false;
           }
         } else {
-          // 'not_found', 'none', 'error' for focus mode
-          debugPrint(
-              "[Focus] Target '$_focusedObject' not found or error. Status '$status'. Resetting.");
+          debugPrint("[Focus] Target '$_focusedObject' not found or error. Status '$status'. Resetting.");
           _currentProximity = 0.0;
           _isFocusObjectDetectedInFrame = false;
           _isFocusObjectCentered = false;
         }
         _updateFocusFeedback();
       }
-      // --- Handle Normal Mode Results (for dedicated pages) ---
       else {
         bool speakResult = false;
         String textToSpeak = "";
@@ -1018,15 +1110,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         if (featureId == objectDetectionFeature.id) {
           if (status == 'ok') {
             List<String> names = (resultData['detections'] as List<dynamic>?)
-                    ?.map((d) =>
-                        (d as Map<String, dynamic>)['name'] as String? ?? '')
+                    ?.map((d) => (d as Map<String, dynamic>)['name'] as String? ?? '')
                     .where((name) => name.isNotEmpty)
                     .toList() ??
                 [];
             List<String> filteredNames = _filterObjectsByCategory(names);
-            displayResult = filteredNames.isNotEmpty
-                ? filteredNames.join(', ')
-                : "No objects in category";
+            displayResult = filteredNames.isNotEmpty ? filteredNames.join(', ') : "No objects in category";
             speakResult = filteredNames.isNotEmpty;
             textToSpeak = displayResult;
           } else if (status == 'none') {
@@ -1037,8 +1126,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           _lastObjectResult = displayResult;
         } else if (featureId == sceneDetectionFeature.id) {
           if (status == 'ok') {
-            displayResult = (resultData['scene'] as String? ?? "Unknown Scene")
-                .replaceAll('_', ' ');
+            displayResult = (resultData['scene'] as String? ?? "Unknown Scene").replaceAll('_', ' ');
             speakResult = true;
             textToSpeak = "Scene: $displayResult";
           } else {
@@ -1056,90 +1144,66 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             displayResult = resultData['message'] ?? "Text Error";
           }
           _lastSceneTextResult = displayResult;
-        } else if (featureId == currencyDetectionFeature.id) {
+        } else if (featureId == currencyDetectionFeature.id) { // Updated for currency
           if (status == 'ok') {
-            displayResult =
-                resultData['currency'] as String? ?? "Unknown Currency";
+            // Backend sends 'currency' (name) and 'confidence'
+            final String currencyName = resultData['currency'] as String? ?? "Unknown Currency";
+            // final double confidence = (resultData['confidence'] as num?)?.toDouble() ?? 0.0;
+            // For now, just display the name as per current CurrencyDetectionPage
+            displayResult = currencyName; 
             speakResult = true;
             textToSpeak = "Currency detected: $displayResult";
           } else if (status == 'none') {
-            displayResult = "No currency detected";
-          } else {
+            displayResult = resultData['message'] ?? "No currency detected"; // Use message if available
+          } else { // error
             displayResult = resultData['message'] ?? "Currency Error";
           }
           _lastCurrencyResult = displayResult;
         }
 
-        // Hazard feature ID results are primarily handled by _processHazardDetection setting global state
-
-        if (speakResult &&
-            _ttsInitialized &&
-            featureId != hazardDetectionFeature.id) {
+        if (speakResult && _ttsInitialized && featureId != hazardDetectionFeature.id) {
           _ttsService.speak(textToSpeak);
         }
       }
-      // _isProcessingImage = false; // This is now reset in _handleWebSocketData
     });
   }
 
-  // Helper methods for processing SuperVision's STRING results (adapted from Backend)
-  Map<String, dynamic> _processSupervisionObjectDetectionResult(
-      String rawDetections) {
+  Map<String, dynamic> _processSupervisionObjectDetectionResult(String rawDetections) {
     String displayResult;
     bool speakResult = false;
     String textToSpeak = "";
 
-    if (rawDetections.isNotEmpty &&
-        rawDetections != "No objects detected" &&
-        !rawDetections.startsWith("Error")) {
-      List<String> allDetected =
-          rawDetections.split(',').map((e) => e.trim()).toList();
-      List<String> filteredObjects =
-          _filterObjectsByCategory(allDetected); // Use Backend's filtering
+    if (rawDetections.isNotEmpty && rawDetections != "No objects detected" && !rawDetections.startsWith("Error")) {
+      List<String> allDetected = rawDetections.split(',').map((e) => e.trim()).toList();
+      List<String> filteredObjects = _filterObjectsByCategory(allDetected); 
 
       if (filteredObjects.isNotEmpty) {
         displayResult = filteredObjects.join(', ');
         speakResult = true;
         textToSpeak = displayResult;
       } else {
-        displayResult =
-            "No objects found in category: ${objectDetectionCategories[_selectedObjectCategory] ?? _selectedObjectCategory}";
-        speakResult = false; // Don't speak if empty after filter
+        displayResult = "No objects found in category: ${objectDetectionCategories[_selectedObjectCategory] ?? _selectedObjectCategory}";
+        speakResult = false; 
       }
     } else {
-      displayResult = rawDetections; // "No objects detected" or "Error..."
+      displayResult = rawDetections; 
       speakResult = false;
     }
-    return {
-      'display': displayResult,
-      'speak': speakResult,
-      'speakText': textToSpeak
-    };
+    return {'display': displayResult, 'speak': speakResult, 'speakText': textToSpeak};
   }
 
   Map<String, dynamic> _processSupervisionSceneResult(String resultTextRaw) {
     String displayResult = resultTextRaw.replaceAll('_', ' ');
-    bool speakResult =
-        displayResult.isNotEmpty && !displayResult.startsWith("Error");
+    bool speakResult = displayResult.isNotEmpty && !displayResult.startsWith("Error");
     String textToSpeak = speakResult ? "Scene: $displayResult" : "";
-    return {
-      'display': displayResult,
-      'speak': speakResult,
-      'speakText': textToSpeak
-    };
+    return {'display': displayResult, 'speak': speakResult, 'speakText': textToSpeak};
   }
 
   Map<String, dynamic> _processSupervisionTextResult(String resultTextRaw) {
     String displayResult = resultTextRaw;
-    bool speakResult = displayResult.isNotEmpty &&
-        displayResult != "No text detected" &&
-        !displayResult.startsWith("Error");
+    bool speakResult = displayResult.isNotEmpty && displayResult != "No text detected" && !displayResult.startsWith("Error");
     String textToSpeak = speakResult ? "Text detected: $displayResult" : "";
-    return {
-      'display': displayResult,
-      'speak': speakResult,
-      'speakText': textToSpeak
-    };
+    return {'display': displayResult, 'speak': speakResult, 'speakText': textToSpeak};
   }
 
   List<String> _filterObjectsByCategory(List<String> objectNames) {
@@ -1150,7 +1214,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }).toList();
   }
 
-  // Processes list of object names for hazards, triggers alert, returns primary hazard name. (Backend logic)
   String _processHazardDetection(List<String> detectedObjectNames) {
     String specificHazardFound = "";
     bool hazardFoundInFrame = false;
@@ -1165,24 +1228,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
 
     if (hazardFoundInFrame) {
-      _triggerHazardAlert(
-          specificHazardFound); // Triggers sound, vibration, TTS
+      _triggerHazardAlert(specificHazardFound); 
     }
-    // This method sets _isHazardAlertActive and _currentDisplayedHazardName
-    // which are used by HazardDetectionPage and SuperVisionPage.
-    return specificHazardFound; // Return name for other uses if needed
+    return specificHazardFound; 
   }
 
   Map<String, dynamic> _processSupervisionCurrencyResult(String resultTextRaw) {
-    String displayResult = resultTextRaw.replaceAll('_', ' ');
-    bool speakResult =
-        displayResult.isNotEmpty && !displayResult.startsWith("Error");
-    String textToSpeak = speakResult ? "Currency detected: $displayResult" : "";
-    return {
-      'display': displayResult,
-      'speak': speakResult,
-      'speakText': textToSpeak
-    };
+    // This function expects the raw string result from the backend's SuperVision currency processing
+    String displayResult = resultTextRaw.replaceAll('_', ' '); // Basic formatting if needed
+    bool speakResult = displayResult.isNotEmpty && 
+                       !displayResult.toLowerCase().startsWith("error") && 
+                       displayResult.toLowerCase() != "no currency detected by supervision"; // Check for common non-results
+    String textToSpeak = speakResult ? "Currency detected: $displayResult" : (displayResult.toLowerCase().startsWith("error") ? displayResult : ""); // Speak error or actual result
+    
+    // If "No currency detected by SuperVision", don't speak it unless you want to.
+    // For this implementation, we will only speak actual detections or errors.
+    if (displayResult.toLowerCase() == "no currency detected by supervision") {
+        textToSpeak = ""; // Don't speak "No currency detected" for supervision, keep it visual
+    }
+
+    return {'display': displayResult, 'speak': speakResult, 'speakText': textToSpeak};
   }
 
   void _handleWebSocketError(error) {
@@ -1196,12 +1261,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _isProcessingImage = false;
       _lastObjectResult = "Connection Error";
       _lastSceneTextResult = "Connection Error";
-      _lastCurrencyResult = "Connection Error";
+      _lastCurrencyResult = "Connection Error"; // Reset currency on error
       _isHazardAlertActive = false;
       _currentDisplayedHazardName = "";
       _isFocusModeActive = false;
       _focusedObject = null;
-      // SuperVision error state
       _isSupervisionProcessing = false;
       _supervisionResultType = "supervision_error";
       _supervisionDisplayResult = "Connection Error: ${error.toString()}";
@@ -1223,23 +1287,30 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         _isProcessingImage = false;
         _lastObjectResult = "Disconnected";
         _lastSceneTextResult = "Disconnected";
-        _lastCurrencyResult = "Disconnected";
+        _lastCurrencyResult = "Disconnected"; // Reset currency on disconnect
         _isHazardAlertActive = false;
         _currentDisplayedHazardName = "";
         _isFocusModeActive = false;
         _focusedObject = null;
-        // SuperVision disconnected state
         _isSupervisionProcessing = false;
         _supervisionResultType = "supervision_error";
         _supervisionDisplayResult = "Disconnected. Trying to reconnect...";
         _supervisionHazardName = "";
         _supervisionIsHazardActive = false;
       });
-      _showStatusMessage('Disconnected. Trying to reconnect...',
-          isError: true, durationSeconds: 5);
+      _showStatusMessage('Disconnected. Trying to reconnect...', isError: true, durationSeconds: 5);
     }
   }
-
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   // --- Speech Recognition Handling ---
   Future<void> _initSpeech() async {
     try {
@@ -1499,6 +1570,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   // --- Detection Logic ---
   void _startDetectionTimerIfNeeded() {
     if (!mounted || _features.isEmpty) return;
@@ -1748,6 +1829,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   // --- Alerting (Hazard & Focus) ---
   void _triggerHazardAlert(String hazardName) {
     debugPrint("[ALERT] Hazard Triggering for: $hazardName");
@@ -1858,6 +1949,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   // --- Navigation & UI Helpers ---
   void _showStatusMessage(String message,
       {bool isError = false, int durationSeconds = 3}) {
@@ -1970,6 +2071,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+  
+  
+  
+  
+  
+  
+  
+  
+  
   // --- Page Change Handler ---
   void _onPageChanged(int index) async {
     if (!mounted) return;
@@ -2181,7 +2291,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // --- End Final Page Setup ---
   }
 
-  // --- Widget Build Logic ---
+
+
+
+
+
+
+
+
+
+
+// --- Widget Build Logic ---
   @override
   Widget build(BuildContext context) {
     if (_features.isEmpty)
@@ -2215,58 +2335,48 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               title: currentFeature.title,
               backgroundColor: currentFeature.color),
 
-          // --- Tutorial Button ---
           _buildTutorialButton(),
 
-          // --- Left Navigation Arrow ---
-          if (_currentPage > 0 &&
-              !_isTutorialActive) // Hide arrows during tutorial
+          if (_currentPage >= 0 && !_isTutorialActive) 
             Align(
               alignment: Alignment.centerLeft,
               child: Padding(
                 padding: const EdgeInsets.only(left: 8.0),
                 child: IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                      color: Colors.white, size: 48.0),
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 48.0),
                   onPressed: _navigateToPreviousPage,
                   tooltip: 'Previous Feature',
                   style: IconButton.styleFrom(
                       backgroundColor: Colors.black.withOpacity(0.35),
                       padding: const EdgeInsets.all(10.0),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(50))),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50))),
                 ),
               ),
             ),
 
-          // --- Right Navigation Arrow ---
-          if (_currentPage < _features.length - 1 &&
-              !_isTutorialActive) // Hide arrows during tutorial
+          if (_currentPage <= _features.length - 1 && !_isTutorialActive) 
             Align(
               alignment: Alignment.centerRight,
               child: Padding(
                 padding: const EdgeInsets.only(right: 8.0),
                 child: IconButton(
-                  icon: const Icon(Icons.arrow_forward_ios_rounded,
-                      color: Colors.white, size: 48.0),
+                  icon: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 48.0),
                   onPressed: _navigateToNextPage,
                   tooltip: 'Next Feature',
                   style: IconButton.styleFrom(
                       backgroundColor: Colors.black.withOpacity(0.35),
                       padding: const EdgeInsets.all(10.0),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(50))),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50))),
                 ),
               ),
             ),
 
-          if (!_isTutorialActive) // Hide settings during tutorial for simplicity
+          if (!_isTutorialActive) 
             _buildSettingsButton(),
 
-          if (!_isTutorialActive) // Hide main action button during tutorial
+          if (!_isTutorialActive) 
             _buildMainActionButton(currentFeature),
 
-          // --- Tutorial Overlay ---
           if (_isTutorialActive) _buildTutorialOverlay(),
         ],
       ),
@@ -2280,7 +2390,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         child: Padding(
           padding: const EdgeInsets.only(top: 10.0, left: 15.0),
           child: Container(
-            // Added container for better tap area and visual feedback
             decoration: BoxDecoration(
               color: Colors.black.withOpacity(0.3),
               shape: BoxShape.circle,
@@ -2289,20 +2398,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               icon: const Icon(Icons.question_mark_rounded,
                   color: Colors.white,
                   size: 30.0,
-                  shadows: [
-                    Shadow(
-                        blurRadius: 6.0,
-                        color: Colors.black54,
-                        offset: Offset(1.0, 1.0))
-                  ]),
+                  shadows: [ Shadow( blurRadius: 6.0, color: Colors.black54, offset: Offset(1.0, 1.0)) ]),
               tooltip: 'Tap for feature help, Long-press for full tutorial',
               onPressed: () {
                 if (_isTutorialActive && _isTutorialSpeaking) {
-                  // If full tutorial is running, tap cancels it
                   _ttsService.stop();
-                  _isTutorialSpeaking =
-                      false; // This will make _playNextTutorialStep call _endTutorial
-                  // _endTutorial(); // Or call directly
+                  _isTutorialSpeaking = false; 
                 } else {
                   _startCurrentFeatureTutorial();
                 }
@@ -2318,13 +2419,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildTutorialOverlay() {
-    if (!_isTutorialActive ||
-        (_tutorialMessages.isEmpty ||
-            _currentTutorialStep >= _tutorialMessages.length)) {
-      // If messages are empty or step is out of bounds, don't build.
-      // This can happen if _endTutorial was called and reset _tutorialMessages.
+    if (!_isTutorialActive || (_tutorialMessages.isEmpty || _currentTutorialStep >= _tutorialMessages.length)) {
       if (_isTutorialActive && mounted) {
-        // If still marked active, try to end cleanly.
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted && _isTutorialActive) _endTutorial();
         });
@@ -2335,32 +2431,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     return Positioned.fill(
       child: GestureDetector(
-        // <--- WRAPPED with GestureDetector
         onTap: () {
-          // Only allow skipping if the full tutorial is active and speaking.
-          // Do not trigger skip for single-feature help taps.
-          if (_isTutorialActive &&
-              _isTutorialSpeaking &&
-              _tutorialMessages.length > 1) {
+          if (_isTutorialActive && _isTutorialSpeaking && _tutorialMessages.length > 1) {
             _handleTutorialSkip();
           }
         },
-        behavior: HitTestBehavior.opaque, // Ensure the whole area is tappable
+        behavior: HitTestBehavior.opaque, 
         child: Container(
           color: Colors.black.withOpacity(0.85),
-          padding:
-              const EdgeInsets.only(top: 150, bottom: 150, left: 30, right: 30),
+          padding: const EdgeInsets.only(top: 150, bottom: 150, left: 30, right: 30),
           child: Center(
             child: SingleChildScrollView(
               child: Text(
                 message,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w600,
-                  height: 1.5,
-                ),
+                style: const TextStyle( color: Colors.white, fontSize: 22, fontWeight: FontWeight.w600, height: 1.5,),
               ),
             ),
           ),
@@ -2374,17 +2459,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return Container(
           key: const ValueKey('placeholder_initializing'),
           color: Colors.black,
-          child: const Center(
-              child: CircularProgressIndicator(color: Colors.white)));
-    } else if (_cameraController != null &&
-        _initializeControllerFuture != null) {
+          child: const Center(child: CircularProgressIndicator(color: Colors.white)));
+    } else if (_cameraController != null && _initializeControllerFuture != null) {
       return FutureBuilder<void>(
           key: _cameraViewKey,
           future: _initializeControllerFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.done) {
-              if (_cameraController != null &&
-                  _cameraController!.value.isInitialized) {
+              if (_cameraController != null && _cameraController!.value.isInitialized) {
                 return CameraViewWidget(
                     cameraController: _cameraController,
                     initializeControllerFuture: _initializeControllerFuture);
@@ -2394,8 +2476,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             } else {
               return Container(
                   color: Colors.black,
-                  child: const Center(
-                      child: CircularProgressIndicator(color: Colors.white)));
+                  child: const Center(child: CircularProgressIndicator(color: Colors.white)));
             }
           });
     } else {
@@ -2407,8 +2488,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return Container(
         key: ValueKey('placeholder_error_$message'),
         color: Colors.black,
-        child: Center(
-            child: Text(message, style: const TextStyle(color: Colors.red))));
+        child: Center(child: Text(message, style: const TextStyle(color: Colors.red))));
   }
 
   Widget _buildFeaturePageView() {
@@ -2419,9 +2499,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         onPageChanged: _onPageChanged,
         itemBuilder: (context, index) {
           if (index >= _features.length)
-            return Center(
-                child: Text("Error: Invalid page index $index",
-                    style: const TextStyle(color: Colors.red)));
+            return Center(child: Text("Error: Invalid page index $index", style: const TextStyle(color: Colors.red)));
           final feature = _features[index];
 
           switch (feature.id) {
@@ -2440,10 +2518,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               return SceneDetectionPage(detectionResult: _lastSceneTextResult);
             case 'text_detection':
               return TextDetectionPage(detectionResult: _lastSceneTextResult);
-            case 'currency_detection':
-              return CurrencyDetectionPage(
-                  detectionResult: _lastCurrencyResult);
-
+            case 'currency_detection': // This uses _lastCurrencyResult
+              return CurrencyDetectionPage(detectionResult: _lastCurrencyResult);
             case 'focus_mode':
               return FocusModePage(
                   key: const ValueKey('focusMode'),
@@ -2451,7 +2527,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   isObjectDetectedInFrame: _isFocusObjectDetectedInFrame,
                   isObjectCentered: _isFocusObjectCentered,
                   isPrompting: _isFocusPromptActive);
-            case 'supervision': // Added SuperVision case
+            case 'supervision': 
               return SuperVisionPage(
                   key: const ValueKey('supervision'),
                   isLoading: _isSupervisionProcessing,
@@ -2460,9 +2536,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   hazardName: _supervisionHazardName,
                   isHazardActive: _supervisionIsHazardActive);
             default:
-              return Center(
-                  child: Text('Unknown Page: ${feature.id}',
-                      style: const TextStyle(color: Colors.white)));
+              return Center(child: Text('Unknown Page: ${feature.id}', style: const TextStyle(color: Colors.white)));
           }
         });
   }
@@ -2474,89 +2548,59 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             child: Padding(
                 padding: const EdgeInsets.only(top: 10.0, right: 15.0),
                 child: IconButton(
-                    icon: const Icon(Icons.settings,
-                        color: Colors.white,
-                        size: 32.0,
-                        shadows: [
-                          Shadow(
-                              blurRadius: 6.0,
-                              color: Colors.black54,
-                              offset: Offset(1.0, 1.0))
-                        ]),
+                    icon: const Icon(Icons.settings, color: Colors.white, size: 32.0, shadows: [ Shadow(blurRadius: 6.0, color: Colors.black54, offset: Offset(1.0, 1.0))]),
                     onPressed: _navigateToSettingsPage,
                     tooltip: 'Settings'))));
   }
 
   Widget _buildMainActionButton(FeatureConfig currentFeature) {
-    final bool isRealtimeObjectOrHazard =
-        currentFeature.id == objectDetectionFeature.id ||
-            currentFeature.id == hazardDetectionFeature.id;
+    final bool isRealtimeObjectOrHazard = currentFeature.id == objectDetectionFeature.id || currentFeature.id == hazardDetectionFeature.id;
     final bool isBarcodePage = currentFeature.id == barcodeScannerFeature.id;
     final bool isFocusActivePage = currentFeature.id == focusModeFeature.id;
     final bool isSuperVisionPage = currentFeature.id == supervisionFeature.id;
-    final bool isCurrencyPage =
-        currentFeature.id == currencyDetectionFeature.id;
+    final bool isCurrencyPage = currentFeature.id == currencyDetectionFeature.id; // Already here
 
     VoidCallback? onTapAction;
     if (isSuperVisionPage) {
-      // SuperVision tap action
       onTapAction = () {
-        debugPrint(
-            "[Action Button] SuperVision tap - performing LLM analysis.");
-        _performManualDetection(
-            supervisionFeature.id); // This calls _performSuperVisionLlmAnalysis
+        debugPrint("[Action Button] SuperVision tap - performing LLM analysis.");
+        _performManualDetection(supervisionFeature.id); 
       };
     } else if (isFocusActivePage) {
-      // Focus tap action
       onTapAction = () {
         debugPrint("[Action Button] Focus tap - listening for object.");
         if (!_speechEnabled) {
           _showStatusMessage('Speech not available', isError: true);
-          _initSpeech();
-          return;
+          _initSpeech(); return;
         }
-        if (_speechToText.isNotListening)
-          _startListening(isForFocusObject: true);
-        else
-          _stopListening();
+        if (_speechToText.isNotListening) _startListening(isForFocusObject: true);
+        else _stopListening();
       };
-    } else if (!isRealtimeObjectOrHazard && !isBarcodePage) {
-      // Manual Trigger (Scene/Text/Currency)
+    } else if (!isRealtimeObjectOrHazard && !isBarcodePage) { // This covers Scene, Text, and Currency
       onTapAction = () {
-        debugPrint(
-            "[Action Button] Manual detection tap for ${currentFeature.id}");
+        debugPrint("[Action Button] Manual detection tap for ${currentFeature.id}");
         _performManualDetection(currentFeature.id);
       };
     }
-    // No tap action for realtime object/hazard or barcode.
 
     VoidCallback onLongPressAction = () {
       debugPrint("[Action Button] Long press - listening for general command.");
       if (!_speechEnabled) {
         _showStatusMessage('Speech not available', isError: true);
-        _initSpeech();
-        return;
+        _initSpeech(); return;
       }
-      if (_speechToText.isNotListening)
-        _startListening(isForFocusObject: false);
-      else
-        _stopListening();
+      if (_speechToText.isNotListening) _startListening(isForFocusObject: false);
+      else _stopListening();
     };
 
-    IconData iconData = Icons.mic_none; // Default for listening
-    if (_isListening)
-      iconData = Icons.mic;
-    else if (isCurrencyPage) {
+    IconData iconData = Icons.mic_none; 
+    if (_isListening) iconData = Icons.mic;
+    else if (isCurrencyPage) { // Icon for currency page is already correct
       iconData = Icons.attach_money;
-    } else if (isFocusActivePage)
-      iconData = Icons.filter_center_focus;
-    else if (isSuperVisionPage)
-      iconData = Icons.auto_awesome; // Icon for SuperVision
-    else if (!isRealtimeObjectOrHazard && !isBarcodePage)
-      iconData = Icons.play_arrow; // Manual trigger
-    else
-      iconData = Icons
-          .camera_alt; // Default for object/hazard pages when not listening
+    } else if (isFocusActivePage) iconData = Icons.filter_center_focus;
+    else if (isSuperVisionPage) iconData = Icons.auto_awesome; 
+    else if (!isRealtimeObjectOrHazard && !isBarcodePage) iconData = Icons.play_arrow; 
+    else iconData = Icons.camera_alt; 
 
     return ActionButton(
         onTap: onTapAction,
