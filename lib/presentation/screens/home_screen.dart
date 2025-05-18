@@ -12,6 +12,8 @@ import 'package:flutter/foundation.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:vibration/vibration.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:video_player/video_player.dart';
+
 
 import '../../core/models/feature_config.dart';
 import '../../core/services/websocket_service.dart';
@@ -38,6 +40,34 @@ import 'settings_screen.dart';
 
 
 
+
+
+
+
+
+
+
+
+enum MediaType { image, gif, video }
+
+class TutorialStepData {
+  final String text;
+  final String? mediaAssetPath; 
+  final MediaType? mediaType;
+  final bool autoAdvanceAfterMediaEnds; 
+  final double? mediaHeight; 
+  final BoxFit mediaFit; 
+
+  TutorialStepData({
+    required this.text,
+    this.mediaAssetPath,
+    this.mediaType,
+    this.autoAdvanceAfterMediaEnds = false,
+    this.mediaHeight,
+    this.mediaFit = BoxFit.contain, 
+  });
+}
+// --- END MOVED DEFINITIONS ---
 
 
 
@@ -191,13 +221,30 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   
   
   // --- Tutorial State Variables ---
-  bool _isTutorialActive = false;
+  // bool _isTutorialActive = false;
+  // int _currentTutorialStep = 0;
+  // List<String> _tutorialMessages = [];
+  // List<String> _featureSpecificTutorialMessages = [];
+  // bool _isFirstRun = true; // Assume true until checked
+  // bool _isTutorialSpeaking = false; // To manage TTS during tutorial
+  // bool _isSkipping = false;
+
+
+
+  bool _isTutorialActive = false; 
   int _currentTutorialStep = 0;
-  List<String> _tutorialMessages = [];
-  List<String> _featureSpecificTutorialMessages = [];
-  bool _isFirstRun = true; // Assume true until checked
-  bool _isTutorialSpeaking = false; // To manage TTS during tutorial
+  List<TutorialStepData> _tutorialStepsData = []; 
+  List<TutorialStepData> _currentFeatureHelpSteps = []; 
+  bool _isFirstRun = true; 
+  bool _isTutorialSpeaking = false; 
   bool _isSkipping = false;
+
+VideoPlayerController? _tutorialVideoController;
+Future<void>? _initializeVideoPlayerFuture;
+bool _isVideoBuffering = false;
+
+
+
 
   // --- Lifecycle Methods ------------------------------------------------------------------------------------
   @override
@@ -289,7 +336,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     await _loadAndInitializeSettings();
     await _checkVibratorAndAmplitude();
     await _prepareAudioPlayers();
-    _initializeTutorialContent(); // Initialize tutorial messages
+    //_initializeTutorialContent(); // Initialize tutorial messages
     // Check for first run after settings are loaded (SharedPreferences is available)
     await _checkFirstRun();
 
@@ -338,61 +385,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     } else {
       debugPrint("[HomeScreen] Not a first run.");
     }
-  }
-
-  void _initializeTutorialContent() {
-    _tutorialMessages = [
-      "Welcome to Vision Aid.",
-      "This app is designed to help you understand your surroundings using your phone's camera and advanced analysis.",
-      "Let's quickly go over the app's interface.",
-      "At the top, you'll see the title of the currently selected feature, like 'Object Detection'.",
-      "At the bottom center is the main action button.",
-      "For features like Text Recognition or Scene Description, tapping this button will capture an image and process it.",
-      "Long-pressing this button activates voice commands, allowing you to switch features or change settings by speaking.",
-      "On the left and right edges of the screen, you'll find arrow buttons.",
-      "You can tap these to navigate to the previous or next feature.",
-      "You can also swipe left or right anywhere on the screen to change features.",
-      "In the top right corner, the gear icon opens the settings screen.",
-      "Here, you can adjust voice speed, language for text recognition, and object detection filters.",
-      "You can also change the object detection filters to filter what types of objects are detected using voice commands.",
-      "To do this, just hold the main action button and say the phrase 'category' then name your category.",
-      "And in the top left corner, you'll see a question mark icon.",
-      "That's the tutorial button!",
-      "Tap it anytime for a quick explanation of the current feature.",
-      "Long-press it to replay this full tutorial.",
-      "Vision Aid offers several powerful features. Let's explore them.",
-      "SuperVision: This is our middleware feature, for your convenience.",
-      "When on the SuperVision page, tap the main action button.",
-      "It analyzes the camera view using AI.",
-      "Based on the analysis, it might include identifying objects, describing the scene, reading text, or even alerting you to hazards it finds.",
-      "Object Detection: This feature works in real-time.",
-      "As you point your phone around, it will continuously identify and announce objects it sees.",
-      "You can filter what types of objects are detected in the settings menu.",
-      "Hazard Detection: This feature also works in real-time to alert you to potential hazards, such as cars or specific items that could be dangerous.",
-      "If a hazard is detected, the app will make a sound and vibrate.",
-      "Object Finder: First, tap the main action button.",
-      "The app will ask you to say the name of the object you want to find.",
-      "After you say the object's name, the app will use sound and vibration to help guide you towards it as it's detected in the camera's view.",
-      "Scene Description: Point your phone towards an area you want to understand better, then tap the main action button.",
-      "The app will process the image and describe the scene to you.",
-      "Text Recognition: If you want to read text from a document, sign, or product, point your phone at the text and tap the main action button.",
-      "The app will read the detected text aloud.",
-      "You can change the language for text recognition in the settings.",
-      "Barcode Scanner: This feature activates automatically when you navigate to its page.",
-      "Simply point your camera at a barcode.",
-      "The app will scan it and, if the product is in its database, tell you the product information.",
-      "To navigate between these features, you have a few options.",
-      "You can swipe left or right anywhere on the main part of the screen.",
-      "You can tap the large arrow buttons that appear on the left and right sides of the screen.",
-      "Or, you can use voice commands.",
-      "Long-press the main action button at the bottom, wait for the prompt, and then say the feature name like 'object detection', 'go to page 3', or 'barcode scanner'.",
-      "You can also say 'settings' to go to the settings page.",
-      "Remember, if you ever need a quick reminder on how to use the feature you're currently on, just tap the question mark button in the top left.",
-      "To hear this full tutorial again, long-press that same question mark button.",
-      "This concludes the main tutorial.",
-      "We hope Vision Aid empowers you to explore your world with greater confidence.",
-      "Happy exploring!"
-    ];
   }
 
   void _initializeFeatures() {
@@ -474,191 +466,493 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
 // --- Tutorial Logic ---
 
+  void _initializeTutorialContent() {
+    // Example: Replace with your actual asset paths and desired media types
+    _tutorialStepsData = [
+      TutorialStepData(
+        text: "Welcome to Vision Aid.",
+        mediaAssetPath: "assets/tutorial_media/app_logo.jpg", // Placeholder - REPLACE
+        mediaType: MediaType.image,
+        mediaHeight: 120,
+      ),
+      TutorialStepData(
+        text: "This app is designed to help you understand your surroundings using your phone's camera and advanced analysis.",
+      ),
+      TutorialStepData(
+        text: "Let's quickly go over the app's interface.",
+      ),
+      TutorialStepData(
+        text: "At the top, you'll see the title of the currently selected feature, like 'Object Detection'.",
+        mediaAssetPath: "assets/tutorial_media/feature_title_example.png", // Placeholder - REPLACE
+        mediaType: MediaType.image,
+        mediaHeight: 200,
+        mediaFit: BoxFit.fitWidth,
+      ),
+      TutorialStepData(
+        text: "At the bottom center is the main action button.",
+        mediaAssetPath: "assets/tutorial_media/action_button_example.gif", // Placeholder - REPLACE
+        mediaType: MediaType.gif,
+        mediaHeight: 150,
+      ),
+      TutorialStepData(
+        text: "For features like Text Recognition or Scene Description, tapping this button will capture an image and process it.",
+      ),
+      TutorialStepData(
+        text: "Long-pressing this button activates voice commands, allowing you to switch features or change settings by speaking.",
+      ),
+      TutorialStepData(
+        text: "On the left and right edges of the screen, you'll find arrow buttons.",
+        mediaAssetPath: "assets/tutorial_media/navigation_arrows_example.mp4", // Placeholder - REPLACE
+        mediaType: MediaType.video,
+        autoAdvanceAfterMediaEnds: false, // Set to true if you want auto-advance after video
+        mediaHeight: 250,
+      ),
+      TutorialStepData(
+        text: "You can tap these to navigate to the previous or next feature. You can also swipe left or right anywhere on the screen to change features.",
+      ),
+      TutorialStepData(
+        text: "In the top right corner, the gear icon opens the settings screen. Here, you can adjust voice speed, language for text recognition, and object detection filters. you can also chnage the object detection filters to filter what types of objects are detected, uisng voice commands, just hold the main action button and say the phrase \" category \" then name your category.",
+        mediaAssetPath: "assets/tutorial_media/settings_icon_example.png", // Placeholder - REPLACE
+        mediaType: MediaType.image,
+        mediaHeight: 80,
+      ),
+      TutorialStepData(
+        text: "And in the top left corner, you'll see a question mark icon. That's the tutorial button! Tap it anytime for a quick explanation of the current feature. Long-press it to replay this full tutorial.",
+        mediaAssetPath: "assets/tutorial_media/tutorial_button_example.png", // Placeholder - REPLACE
+        mediaType: MediaType.image,
+        mediaHeight: 80,
+      ),
+      TutorialStepData(
+        text: "Vision Aid offers several powerful features. Let's explore them.",
+      ),
+      TutorialStepData(text: "SuperVision: This is our middleware feature, for your convenience. When on the SuperVision page, tap the main action button. It analyzes the camera view using AI, and, based on the analysis, it might include identifying objects, describing the scene, reading text, or even alerting you to hazards it finds."),
+      TutorialStepData(text: "Object Detection: This feature works in real-time. As you point your phone around, it will continuously identify and announce objects it sees. You can filter what types of objects are detected in the settings menu."),
+      TutorialStepData(text: "Hazard Detection: This feature also works in real-time to alert you to potential hazards, such as cars or specific items that could be dangerous. If a hazard is detected, the app will make a sound and vibrate."),
+      TutorialStepData(text: "Object Finder: First, tap the main action button. The app will ask you to say the name of the object you want to find. After you say the object's name, the app will use sound and vibration to help guide you towards it as it's detected in the camera's view."),
+      TutorialStepData(text: "Scene Description: Point your phone towards an area you want to understand better, then tap the main action button. The app will process the image and describe the scene to you."),
+      TutorialStepData(text: "Text Recognition: If you want to read text from a document, sign, or product, point your phone at the text and tap the main action button. The app will read the detected text aloud. You can change the language for text recognition in the settings."),
+      TutorialStepData(text: "Currency Detection: Tap the main action button when on the currency page. The app will analyze the image and announce the detected currency."),
+      TutorialStepData(text: "Barcode Scanner: This feature activates automatically when you navigate to its page. Simply point your camera at a barcode. The app will scan it and, if the product is in its database, tell you the product information."),
+      TutorialStepData(text: "To navigate between these features, you have a few options."),
+      TutorialStepData(text: "You can swipe left or right anywhere on the main part of the screen."),
+      TutorialStepData(text: "You can tap the large arrow buttons that appear on the left and right sides of the screen."),
+      TutorialStepData(text: "Or, you can use voice commands. Long-press the main action button at the bottom, wait for the prompt, and then say the feature name like 'object detection', 'go to page 3', or 'barcode scanner'. You can also say 'settings' to go to the settings page."),
+      TutorialStepData(text: "Remember, if you ever need a quick reminder on how to use the feature you're currently on, just tap the question mark button in the top left. To hear this full tutorial again, long-press that same question mark button."),
+      TutorialStepData(text: "This concludes the main tutorial. We hope Vision Aid empowers you to explore your world with greater confidence. Happy exploring!"),
+    ];
+  }
+
   Future<void> _markTutorialAsCompleted() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_hasRunBeforeKey, true);
     if (mounted) {
       setState(() {
-        _isFirstRun = false; // Update state if tutorial was just completed
+        _isFirstRun = false;
       });
     }
     debugPrint("[Tutorial] Marked as completed. First run is now false.");
   }
 
+  // Listener function needs to be defined to be removable and accessible
+  void _videoListener() {
+    if (!mounted || !_isTutorialActive || _tutorialVideoController == null || !_tutorialVideoController!.value.isInitialized) {
+      // Clean up listener if state is no longer valid for it
+      _tutorialVideoController?.removeListener(_videoListener);
+      return;
+    }
+
+    final currentDataSource = _currentFeatureHelpSteps.isNotEmpty ? _currentFeatureHelpSteps : _tutorialStepsData;
+    if (_currentTutorialStep >= currentDataSource.length) {
+        _tutorialVideoController?.removeListener(_videoListener);
+        return;
+    }
+    final stepData = currentDataSource[_currentTutorialStep];
+    final int stepBeingListenedTo = _currentTutorialStep; // Capture for async safety
+
+    final bool isVideoCompleted = _tutorialVideoController!.value.isInitialized && // Ensure initialized
+                                  _tutorialVideoController!.value.position >= _tutorialVideoController!.value.duration &&
+                                  !_tutorialVideoController!.value.isPlaying &&
+                                  !_tutorialVideoController!.value.isBuffering; // Ensure not just paused during buffering
+
+    if (isVideoCompleted) {
+      debugPrint("[Tutorial] Video Listener: Video completed for step $stepBeingListenedTo");
+      _tutorialVideoController!.removeListener(_videoListener); // Clean up listener for this video
+
+      if (stepData.autoAdvanceAfterMediaEnds) {
+        debugPrint("[Tutorial] Video completed and autoAdvance is true. Advancing to next step.");
+        Future.delayed(const Duration(milliseconds: 150), () { // Short delay for smoother transition
+          if (mounted && _isTutorialActive && _currentTutorialStep == stepBeingListenedTo) {
+            _handleTutorialSkip(isAutoAdvance: true);
+          }
+        });
+      } else {
+        debugPrint("[Tutorial] Video completed, autoAdvance is false. Speaking text if any for step $stepBeingListenedTo.");
+        if (mounted && _isTutorialActive && _currentTutorialStep == stepBeingListenedTo) {
+          _isTutorialSpeaking = stepData.text.isNotEmpty; // Allow TTS for the text part of this video step
+          if(mounted) setState((){}); // Update UI to reflect potential change in "tap to skip" message
+          _speakTutorialStepText(stepData, stepBeingListenedTo, currentDataSource);
+        }
+      }
+    }
+  }
+  
+  Future<void> _disposeTutorialVideoController() async {
+    if (_tutorialVideoController != null) {
+      debugPrint("[Tutorial] Disposing tutorial video controller (DataSource: ${_tutorialVideoController?.dataSource})");
+      final controllerToDispose = _tutorialVideoController;
+      _tutorialVideoController = null; // Nullify immediately
+      controllerToDispose?.removeListener(_videoListener); // Remove listener before dispose
+      await controllerToDispose?.pause();
+      await controllerToDispose?.dispose();
+      if (mounted) {
+        // SetState is only needed if these directly drive UI rebuilding that wouldn't otherwise happen.
+        // _initializeVideoPlayerFuture often triggers a FutureBuilder, so nullifying it is important.
+        if (_initializeVideoPlayerFuture != null || _isVideoBuffering) {
+          setState(() {
+            _initializeVideoPlayerFuture = null;
+            _isVideoBuffering = false;
+          });
+        }
+      }
+    }
+  }
+
+
   void _startFullTutorial({bool isAutoStart = false}) async {
-    if (!mounted || !_ttsInitialized) return;
+    debugPrint("[Tutorial] _startFullTutorial CALLED. isAutoStart: $isAutoStart, Mounted: $mounted, TTS Initialized: $_ttsInitialized, isFirstRun: $_isFirstRun");
+    _stopDetectionTimer(); // <<< ADD OR ENSURE THIS IS PRESENT AND EARLY
+    if (!mounted) {
+      debugPrint("[Tutorial] _startFullTutorial aborted: Not mounted.");
+      return;
+    }
+    if (!_ttsInitialized) {
+      debugPrint("[Tutorial] _startFullTutorial aborted: TTS not initialized. Attempting init...");
+      final initialSettings = await Future.wait([
+          _settingsService.getTtsVolume(), _settingsService.getTtsPitch(), _settingsService.getTtsRate()
+      ]);
+
+  
+
+      await _ttsService.initTts(initialVolume: initialSettings[0], initialPitch: initialSettings[1], initialRate: initialSettings[2]);
+      _ttsInitialized = true; 
+      await _ttsService.setSpeechLanguage(_globalTtsLanguageSetting); 
+      debugPrint("[Tutorial] Fallback TTS initialization attempted. TTS Initialized: $_ttsInitialized");
+      if (!_ttsInitialized) return; 
+    }
+
+    await _disposeTutorialVideoController(); 
+
     if (_isTutorialActive && _isTutorialSpeaking) {
-      // If already running, a long press might intend to restart
+      debugPrint("[Tutorial] Full tutorial requested while another was active and speaking. Stopping current TTS.");
       await _ttsService.stop();
-      _isTutorialSpeaking = false;
+    } else if (_isTutorialActive && _tutorialVideoController != null) {
+        debugPrint("[Tutorial] Full tutorial requested while a video might be playing. Disposing video.");
+        await _disposeTutorialVideoController(); // Ensure video stops if tutorial was active but not speaking
     }
-    if (isAutoStart && !_isFirstRun)
-      return; // Don't auto-start if not first run
 
-    debugPrint("[Tutorial] Starting full tutorial. Auto-start: $isAutoStart");
-    if (_ttsInitialized) await _ttsService.stop(); // Stop any current TTS
 
-    setState(() {
-      _isTutorialActive = true;
-      _currentTutorialStep = 0;
-      _isTutorialSpeaking = true;
-    });
-
-    if (isAutoStart || _isFirstRun) {
-      // Mark as run if tutorial starts, especially on auto-start
-      await _markTutorialAsCompleted();
+    if (isAutoStart && !_isFirstRun) {
+      debugPrint("[Tutorial] _startFullTutorial (auto): Not a first run, skipping auto-start.");
+      return;
     }
-    _playNextTutorialStep();
+
+    debugPrint("[Tutorial] Proceeding with _startFullTutorial. Current _isTutorialActive: $_isTutorialActive");
+    
+    await _ttsService.stop(); 
+    debugPrint("[Tutorial] TTS explicitly stopped. TTS Service isPlaying: ${_ttsService.isPlaying}, ttsState: ${_ttsService.ttsState}");
+
+    _currentFeatureHelpSteps = []; 
+    
+    if (_tutorialStepsData.isEmpty) {
+        debugPrint("[Tutorial] _tutorialStepsData is EMPTY in _startFullTutorial. Re-initializing it now.");
+        _initializeTutorialContent(); // This should populate _tutorialStepsData
+        debugPrint("[Tutorial] _startFullTutorial: _tutorialStepsData length after re-init: ${_tutorialStepsData.length}");
+        if (_tutorialStepsData.isEmpty) {
+            debugPrint("[Tutorial] CRITICAL: _tutorialStepsData STILL EMPTY after re-init. Aborting full tutorial.");
+            if(mounted) {
+              setState(() { _isTutorialActive = false; }); 
+            }
+            return;
+        }
+    } else {
+        debugPrint("[Tutorial] _startFullTutorial: _tutorialStepsData already populated. Length: ${_tutorialStepsData.length}");
+    }
+
+    if (mounted) {
+      setState(() {
+        _isTutorialActive = true;
+        _currentTutorialStep = 0;
+        // _isTutorialSpeaking will be determined by _playNextTutorialStep based on the first step's content
+      });
+    } else {
+      debugPrint("[Tutorial] _startFullTutorial aborted after checks: Not mounted before setState.");
+      return;
+    }
+
+    if (isAutoStart || _isFirstRun) { 
+      if (isAutoStart && _isFirstRun) { 
+         await _markTutorialAsCompleted();
+      } else if (!isAutoStart && _isFirstRun) {
+          await _markTutorialAsCompleted();
+      }
+    }
+    
+    debugPrint("[Tutorial] _startFullTutorial about to call _playNextTutorialStep with _tutorialStepsData.");
+    _playNextTutorialStep(dataSource: _tutorialStepsData); 
+  }
+
+  List<TutorialStepData> _getFeatureSpecificHelpSteps(String featureId) {
+    // This function should already be correct from your previous version.
+    // Ensure it returns List<TutorialStepData>
+    switch (featureId) {
+      case 'supervision':
+        return [TutorialStepData(text: "SuperVision: Tap the main action button at the bottom. The app will then analyze what the camera sees and provide a smart description using AI, through automatically identifying what the camera sees. Long press the action button for general voice commands.")];
+      case 'object_detection':
+        return [TutorialStepData(text: "Object Detection: This feature runs in real-time. Point your camera, and it will announce recognized objects. No need to tap the button unless you want to use voice commands via long press. You can filter object categories in settings.")];
+      case 'hazard_detection':
+        return [TutorialStepData(text: "Hazard Detection: This feature runs in real-time. It automatically alerts you to potential hazards with sound and vibration. No button tap needed for detection. Long press the action button for general voice commands.")];
+      case 'focus_mode':
+        return [TutorialStepData(text: "Object Finder: Tap the main action button, then clearly say the name of the object you're looking for. The app will then use sounds and vibrations to guide you as the object comes into view and gets closer to the center.")];
+      case 'scene_detection':
+        return [TutorialStepData(text: "Scene Description: Point your camera at the scene you want described, then tap the main action button. The app will analyze and describe it. Long press for voice commands.")];
+      case 'text_detection':
+        return [TutorialStepData(text: "Text Recognition: Point your camera at the text you want to read, then tap the main action button. The app will detect and read the text aloud. Change OCR language in settings. Long press for voice commands.")];
+      case 'currency_detection':
+        return [TutorialStepData(text: "Currency Detection: Tap the main action button when on the currency page. The app will analyze the image and announce the detected currency.")];
+      case 'barcode_scanner':
+        return [TutorialStepData(text: "Barcode Scanner: This activates automatically on this page. Point your camera at a barcode to scan it. The app will announce product information if found. No button tap needed for scanning.")];
+      default:
+        return [TutorialStepData(text: "Help for this feature is not yet available. Tap the main action button or long press for voice commands.")];
+    }
   }
 
   void _startCurrentFeatureTutorial() async {
     if (!mounted || !_ttsInitialized) return;
+
+    await _disposeTutorialVideoController();
+
     if (_isTutorialActive && _isTutorialSpeaking) {
       await _ttsService.stop();
-      _isTutorialSpeaking = false;
-      _endTutorial(); // Cancel full tutorial if it was running
+    } else if (_isTutorialActive && _tutorialVideoController != null) {
+        await _disposeTutorialVideoController();
     }
+    
+    await _ttsService.stop(); 
 
-    final currentFeature =
-        _features[_currentPage.clamp(0, _features.length - 1)];
-    String featureHelpText = _getFeatureSpecificHelp(currentFeature.id);
+  _stopDetectionTimer(); // <<< ADD OR ENSURE THIS IS PRESENT AND EARLY
+    await _disposeTutorialVideoController();
+
+    final currentFeature = _features[_currentPage.clamp(0, _features.length - 1)];
+    _currentFeatureHelpSteps = _getFeatureSpecificHelpSteps(currentFeature.id);
+    // _tutorialStepsData = []; // DO NOT CLEAR _tutorialStepsData HERE. It's for the main tutorial.
 
     debugPrint("[Tutorial] Starting help for feature: ${currentFeature.title}");
-    if (_ttsInitialized) await _ttsService.stop();
 
-    setState(() {
-      _isTutorialActive = true; // Use the same overlay
-      _currentTutorialStep = 0; // Reset step for single message display
-      _tutorialMessages = [
-        featureHelpText
-      ]; // Temporarily set _tutorialMessages for the overlay
-      _isTutorialSpeaking = true;
-    });
-
-    // Speak the single help message
-    await _ttsService.speak(featureHelpText);
     if (mounted) {
-      // After speaking, revert to a non-speaking state but keep overlay briefly or auto-hide
-      // For simplicity, let's just end the "tutorial mode" for single feature help after speaking
-      Future.delayed(const Duration(milliseconds: 500), () {
-        // Short delay
-        if (mounted &&
-            _tutorialMessages.isNotEmpty &&
-            _tutorialMessages[0] == featureHelpText) {
-          // Ensure it's still the same help
-          _endTutorial();
-        }
+      setState(() {
+        _isTutorialActive = true;
+        _currentTutorialStep = 0;
+        // _isTutorialSpeaking will be set by _playNextTutorialStep
       });
+    } else {
+        return;
     }
+    _playNextTutorialStep(dataSource: _currentFeatureHelpSteps); 
   }
 
-  String _getFeatureSpecificHelp(String featureId) {
-    // Return specific help text based on feature ID
-    switch (featureId) {
-      case 'supervision':
-        return "SuperVision: Tap the main action button at the bottom. The app will then analyze what the camera sees and provide a smart description using AI, through automatically identifying what the camera sees. Long press the action button for general voice commands.";
-      case 'object_detection':
-        return "Object Detection: This feature runs in real-time. Point your camera, and it will announce recognized objects. No need to tap the button unless you want to use voice commands via long press. You can filter object categories in settings.";
-      case 'hazard_detection':
-        return "Hazard Detection: This feature runs in real-time. It automatically alerts you to potential hazards with sound and vibration. No button tap needed for detection. Long press the action button for general voice commands.";
-      case 'focus_mode':
-        return "Object Finder: Tap the main action button, then clearly say the name of the object you're looking for. The app will then use sounds and vibrations to guide you as the object comes into view and gets closer to the center.";
-      case 'scene_detection':
-        return "Scene Description: Point your camera at the scene you want described, then tap the main action button. The app will analyze and describe it. Long press for voice commands.";
-      case 'text_detection':
-        return "Text Recognition: Point your camera at the text you want to read, then tap the main action button. The app will detect and read the text aloud. Change OCR language in settings. Long press for voice commands.";
-      case 'currency_detection':
-        return "Currency Detection: Point your camera at the currency you want detected, then tap the main action button. The app will detect and announce the currency. Long press for voice commands.";
-      case 'barcode_scanner':
-        return "Barcode Scanner: This activates automatically on this page. Point your camera at a barcode to scan it. The app will announce product information if found. No button tap needed for scanning.";
-      default:
-        return "Help for this feature is not yet available. Tap the main action button or long press for voice commands.";
+ Future<void> _handleTutorialSkip({bool isAutoAdvance = false}) async {
+    if (!mounted || !_isTutorialActive || _isSkipping) return;
+    
+    _isSkipping = true;
+    final int stepSkippedFrom = _currentTutorialStep;
+    debugPrint("[Tutorial] Skip handling started for step $stepSkippedFrom. AutoAdvance: $isAutoAdvance");
+
+    if (!isAutoAdvance) { 
+      await _ttsService.stop();
+      await _disposeTutorialVideoController(); 
     }
-  }
 
-  Future<void> _handleTutorialSkip() async {
-    if (!mounted || !_isTutorialActive || !_isTutorialSpeaking || _isSkipping)
-      return;
-
-    _isSkipping = true; // Set busy flag
-    debugPrint(
-        "[Tutorial] Skip handling started. Current step: $_currentTutorialStep");
-
-    await _ttsService.stop();
     _currentTutorialStep++;
 
+    final List<TutorialStepData> currentDataSource = _currentFeatureHelpSteps.isNotEmpty ? _currentFeatureHelpSteps : _tutorialStepsData;
+
     if (mounted && _isTutorialActive) {
-      if (_currentTutorialStep < _tutorialMessages.length) {
-        _isTutorialSpeaking = true;
-        _playNextTutorialStep();
+      if (_currentTutorialStep < currentDataSource.length) {
+        debugPrint("[Tutorial] Skipping to step $_currentTutorialStep.");
+        _playNextTutorialStep(dataSource: currentDataSource);
       } else {
-        _isTutorialSpeaking = false;
-        _endTutorial();
+        debugPrint("[Tutorial] Skip: Reached end of tutorial.");
+        _endTutorial(); // Call _endTutorial which now handles restarting the timer
       }
     }
-
-    if (mounted) {
-      _isSkipping = false; // Reset flag
-    }
-    debugPrint("[Tutorial] Skip handling finished.");
+    if (mounted) _isSkipping = false; // Reset skipping flag
+    // No need to call _startDetectionTimerIfNeeded() here directly, 
+    // as _endTutorial() will be called if it's the end of the tutorial.
+    debugPrint("[Tutorial] Skip handling finished for step $stepSkippedFrom.");
   }
 
-  void _playNextTutorialStep() async {
-    if (!mounted || !_isTutorialActive) {
+  void _playNextTutorialStep({required List<TutorialStepData> dataSource}) async {
+    if (!mounted || !_isTutorialActive || dataSource.isEmpty) { // Added dataSource.isEmpty check
       if (_isTutorialActive && mounted) _endTutorial();
       return;
     }
+    
+    final currentStepIndexForVideoCheck = _currentTutorialStep; 
+    if (_tutorialVideoController != null) {
+        if (currentStepIndexForVideoCheck < dataSource.length) {
+            final nextStepData = dataSource[currentStepIndexForVideoCheck];
+            // A more robust check for "same video" might compare the full dataSource string
+            // This simplified check assumes different asset paths mean different videos.
+            bool disposeOldVideo = true;
+            if (nextStepData.mediaType == MediaType.video && 
+                _tutorialVideoController!.dataSource.contains(nextStepData.mediaAssetPath!)) { // Check if current controller is for the next step's video
+                 // Potentially, if it's the exact same video asset, you might not dispose.
+                 // For now, let's assume if it's a new step, we prefer a fresh controller unless logic is more complex.
+                 // This check is a bit loose. A direct string comparison of asset paths is better.
+                 if (_tutorialVideoController!.dataSource == VideoPlayerController.asset(nextStepData.mediaAssetPath!).dataSource) { // More direct
+                    disposeOldVideo = false; // It's the same video, don't dispose if you want to resume/seek
+                    debugPrint("[Tutorial PlayNext] Next step is same video. Not disposing controller.");
+                 }
+            }
+            if(disposeOldVideo) await _disposeTutorialVideoController();
 
-    if (!_isTutorialSpeaking) {
-      if (_isTutorialActive && mounted) _endTutorial();
-      return;
+        } else {
+             await _disposeTutorialVideoController(); 
+        }
     }
 
-    if (_currentTutorialStep >= _tutorialMessages.length) {
+
+    if (_currentTutorialStep >= dataSource.length) {
       _endTutorial();
       return;
     }
 
-    final message = _tutorialMessages[_currentTutorialStep];
+    final stepData = dataSource[_currentTutorialStep];
+    debugPrint("[Tutorial PlayNext] Playing step ${_currentTutorialStep + 1}/${dataSource.length}: \"${stepData.text.substring(0,min(stepData.text.length, 30))}...\" Media: ${stepData.mediaAssetPath ?? 'None'}");
+
     if (mounted) {
-      setState(() {});
+      // _isTutorialSpeaking should be true if this step has text and we intend to speak it.
+      // It can be set to false by video logic if text is deferred.
+      _isTutorialSpeaking = stepData.text.isNotEmpty; 
+      setState(() {}); 
+    } else {
+      return;
     }
 
-    final int stepForThisCall = _currentTutorialStep;
 
-    await _ttsService.speak(message);
+    final int stepForThisCall = _currentTutorialStep; 
 
-    if (mounted && _isTutorialActive && _isTutorialSpeaking) {
-      if (stepForThisCall == _currentTutorialStep) {
-        _currentTutorialStep++;
-        _playNextTutorialStep();
+    if (stepData.mediaAssetPath != null && stepData.mediaType == MediaType.video) {
+      if(mounted) setState(() => _isVideoBuffering = true);
+      
+      // Determine if TTS for this step should be paused while video loads/plays
+      // If video has text and does not auto-advance the entire step, TTS might be deferred.
+      bool deferTTSForVideo = stepData.text.isNotEmpty && !stepData.autoAdvanceAfterMediaEnds;
+      if (deferTTSForVideo) {
+          _isTutorialSpeaking = false; // TTS will be triggered by video listener
       }
-    } else if (mounted && _isTutorialActive && !_isTutorialSpeaking) {
-      _endTutorial();
+
+
+      _tutorialVideoController = VideoPlayerController.asset(stepData.mediaAssetPath!);
+      _tutorialVideoController!.addListener(_videoListener); 
+      _initializeVideoPlayerFuture = _tutorialVideoController!.initialize().then((_) {
+        if (!mounted || !_isTutorialActive || stepForThisCall != _currentTutorialStep) {
+          debugPrint("[Tutorial PlayNext] Video init: Stale step or tutorial inactive. Disposing.");
+          _disposeTutorialVideoController(); 
+          return;
+        }
+        if(mounted) setState(() => _isVideoBuffering = false);
+        _tutorialVideoController!.play();
+        debugPrint("[Tutorial PlayNext] Video playing: ${stepData.mediaAssetPath}");
+        
+        // If this video step has no text, and doesn't auto-advance, then _isTutorialSpeaking should be false
+        // so the user must tap to continue after the video.
+        if (stepData.text.isEmpty && !stepData.autoAdvanceAfterMediaEnds) {
+            if (mounted) setState(() => _isTutorialSpeaking = false );
+        }
+        // If video has text but doesn't auto-advance the step, listener handles speaking.
+        // If video auto-advances the step, listener calls _handleTutorialSkip.
+
+      }).catchError((error, stackTrace) {
+          debugPrint("[Tutorial PlayNext] Error initializing video '${stepData.mediaAssetPath}': $error \n$stackTrace");
+          if(mounted) setState(() => _isVideoBuffering = false);
+          if (mounted && _isTutorialActive && stepForThisCall == _currentTutorialStep) {
+            // If video fails, ensure _isTutorialSpeaking is true if there's text, then speak it.
+            _isTutorialSpeaking = stepData.text.isNotEmpty;
+            _speakTutorialStepText(stepData, stepForThisCall, dataSource);
+          }
+      });
+    } else { // Image, GIF, or no media
+      // _isTutorialSpeaking is already set based on stepData.text.isNotEmpty
+      _speakTutorialStepText(stepData, stepForThisCall, dataSource);
     }
   }
 
-  void _endTutorial() {
+ Future<void> _speakTutorialStepText(TutorialStepData stepData, int stepForThisCall, List<TutorialStepData> dataSource) async {
+      if (!mounted || !_isTutorialActive || !_isTutorialSpeaking || stepForThisCall != _currentTutorialStep) {
+        // If conditions are not met (e.g. tutorial was ended, or this isn't the current step anymore) then abort.
+        // Also, if _isTutorialSpeaking became false (e.g. user tapped skip while text was meant to play), abort speaking.
+        debugPrint("[Tutorial Speak] Aborted speak for step $stepForThisCall. Mounted: $mounted, Active: $_isTutorialActive, SpeakingFlag: $_isTutorialSpeaking, StepMatch: ${stepForThisCall == _currentTutorialStep}");
+        return;
+      }
+
+      await _ttsService.speak(stepData.text);
+
+      // After speaking, or if there was no text to speak for this step
+      if (mounted && _isTutorialActive && _isTutorialSpeaking && stepForThisCall == _currentTutorialStep) {
+          // If it's not a video that's currently playing and waiting for completion to advance
+          bool shouldAutoAdvanceAfterSpeech = true;
+          if (stepData.mediaType == MediaType.video && _tutorialVideoController != null && _tutorialVideoController!.value.isInitialized && _tutorialVideoController!.value.isPlaying) {
+              if (!stepData.autoAdvanceAfterMediaEnds) {
+                  shouldAutoAdvanceAfterSpeech = false; // Video is playing, user will tap to advance or video listener handles it.
+              }
+          }
+          
+          // This condition was added to handle text after a non-auto-advancing video.
+          // If the video auto-advances the *entire step*, its listener calls _handleTutorialSkip.
+          if(stepData.mediaType == MediaType.video && stepData.autoAdvanceAfterMediaEnds && _tutorialVideoController != null && _tutorialVideoController!.value.isInitialized && !_tutorialVideoController!.value.isPlaying){
+            // This case means: it's a video step, it auto advances the step, and the video has finished playing.
+            // The listener should have already called _handleTutorialSkip. So, don't advance here.
+            shouldAutoAdvanceAfterSpeech = false;
+            debugPrint("[Tutorial Speak] Text for auto-advancing video step $stepForThisCall spoken. Listener handles step advancement.");
+          }
+
+
+          if(shouldAutoAdvanceAfterSpeech){
+            debugPrint("[Tutorial Speak] Auto-advancing after speech/no-media for step $stepForThisCall");
+            _currentTutorialStep++;
+            _playNextTutorialStep(dataSource: dataSource);
+          } else {
+            debugPrint("[Tutorial Speak] Not auto-advancing for step $stepForThisCall (e.g. video playing or non-auto-advancing video finished text)");
+          }
+      } else if (mounted && _isTutorialActive && !_isTutorialSpeaking && stepForThisCall == _currentTutorialStep) {
+          // This case: speaking flag was turned off (e.g., by manual skip) during awaited speak.
+          debugPrint("[Tutorial Speak] Speaking flag became false during/after speak for step $stepForThisCall. No auto-advance.");
+      }
+  }
+
+  void _endTutorial() async {
     if (!mounted) return;
-    debugPrint(
-        "[Tutorial] Ending tutorial. Was active: $_isTutorialActive, Current step: $_currentTutorialStep");
-    if (_isTutorialSpeaking) {
-      _ttsService.stop(); // Stop TTS if it was part of this tutorial flow
+    debugPrint("[Tutorial] Ending tutorial. Was active: $_isTutorialActive, Current step: $_currentTutorialStep");
+    
+    await _disposeTutorialVideoController(); 
+
+    if (_isTutorialSpeaking || _ttsService.isPlaying) { 
+      await _ttsService.stop(); 
     }
+  if (mounted) {
     setState(() {
       _isTutorialActive = false;
       _currentTutorialStep = 0;
       _isTutorialSpeaking = false;
-      // Restore _tutorialMessages if it was changed for single feature help
-      if (_tutorialMessages.length == 1 &&
-          _tutorialMessages[0].startsWith("SuperVision:") == false) {
-        // A bit hacky check
-        _initializeTutorialContent(); // Re-init to full list
-      }
+      _currentFeatureHelpSteps = []; 
     });
   }
-
-  // --- End Tutorial Logic ---
+  
+  debugPrint("[Tutorial] Tutorial ended. Attempting to restart detection timer if needed.");
+  _startDetectionTimerIfNeeded(); // <<< THIS IS ALREADY HERE
+}
+// --- End Tutorial Logic ---
 
   
   
@@ -2418,7 +2712,7 @@ Future<void> _navigateToSettingsPage() async {
           padding: const EdgeInsets.only(top: 10.0, left: 15.0),
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.3),
+              color: Colors.black.withAlpha((0.3 * 255).round()),
               shape: BoxShape.circle,
             ),
             child: IconButton(
@@ -2428,15 +2722,18 @@ Future<void> _navigateToSettingsPage() async {
                   shadows: [ Shadow( blurRadius: 6.0, color: Colors.black54, offset: Offset(1.0, 1.0)) ]),
               tooltip: 'Tap for feature help, Long-press for full tutorial',
               onPressed: () {
+                debugPrint("[Tutorial Button] Short-press detected!");
                 if (_isTutorialActive && _isTutorialSpeaking) {
                   _ttsService.stop();
                   _isTutorialSpeaking = false; 
+                  // _endTutorial(); // Consider if ending is always right here
                 } else {
                   _startCurrentFeatureTutorial();
                 }
               },
               onLongPress: () {
-                _startFullTutorial();
+                debugPrint("[Tutorial Button] Long-press detected! Calling _startFullTutorial...");
+                _startFullTutorial(); // Not autoStart, user initiated
               },
             ),
           ),
@@ -2445,8 +2742,12 @@ Future<void> _navigateToSettingsPage() async {
     );
   }
 
+// In // --- Widget Build Logic --- section
+
   Widget _buildTutorialOverlay() {
-    if (!_isTutorialActive || (_tutorialMessages.isEmpty || _currentTutorialStep >= _tutorialMessages.length)) {
+    final List<TutorialStepData> currentDataSource = _currentFeatureHelpSteps.isNotEmpty ? _currentFeatureHelpSteps : _tutorialStepsData;
+
+    if (!_isTutorialActive || currentDataSource.isEmpty || _currentTutorialStep >= currentDataSource.length) {
       if (_isTutorialActive && mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted && _isTutorialActive) _endTutorial();
@@ -2454,33 +2755,111 @@ Future<void> _navigateToSettingsPage() async {
       }
       return const SizedBox.shrink();
     }
-    final message = _tutorialMessages[_currentTutorialStep];
+    final stepData = currentDataSource[_currentTutorialStep];
+
+    Widget mediaWidget = const SizedBox.shrink();
+    if (stepData.mediaAssetPath != null) {
+      if (stepData.mediaType == MediaType.image || stepData.mediaType == MediaType.gif) {
+        mediaWidget = Image.asset(
+          stepData.mediaAssetPath!,
+          height: stepData.mediaHeight, // Uses provided height or null (intrinsic)
+          fit: stepData.mediaFit,
+          errorBuilder: (context, error, stackTrace) {
+            debugPrint("[Tutorial] Error loading image/gif asset: ${stepData.mediaAssetPath} - $error");
+            return Icon(Icons.broken_image, color: Colors.grey[700], size: 50);
+          },
+        );
+      } else if (stepData.mediaType == MediaType.video) {
+        mediaWidget = (_initializeVideoPlayerFuture != null && _tutorialVideoController != null)
+            ? FutureBuilder(
+                future: _initializeVideoPlayerFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.done && _tutorialVideoController!.value.isInitialized) {
+                    return SizedBox(
+                      height: stepData.mediaHeight ?? 250, // Default height for video if not specified
+                      child: AspectRatio(
+                        aspectRatio: _tutorialVideoController!.value.aspectRatio,
+                        child: VideoPlayer(_tutorialVideoController!),
+                      ),
+                    );
+                  } else if (snapshot.hasError) {
+                     debugPrint("[Tutorial] Video snapshot error: ${snapshot.error}");
+                    return Center(child: Text("Error loading video", style: TextStyle(color: Colors.red[300])));
+                  }
+                  return SizedBox(
+                     height: stepData.mediaHeight ?? 250,
+                     child: Center(child: _isVideoBuffering ? const CircularProgressIndicator(color: Colors.white) : Icon(Icons.play_circle_fill, color: Colors.grey[700], size: 50))
+                  );
+                },
+              )
+            : SizedBox(
+                height: stepData.mediaHeight ?? 250,
+                child: Center(child: Icon(Icons.videocam_off, color: Colors.grey[700], size: 50))
+              ); // Placeholder if controller not ready
+      }
+    }
 
     return Positioned.fill(
       child: GestureDetector(
         onTap: () {
-          if (_isTutorialActive && _isTutorialSpeaking && _tutorialMessages.length > 1) {
+          // Allow skip if full tutorial is playing, or if it's feature help.
+          // Also, if a video is playing and doesn't auto-advance, tap should skip.
+          bool isVideoPlayingNoAutoAdvance = stepData.mediaType == MediaType.video &&
+                                            _tutorialVideoController != null &&
+                                            _tutorialVideoController!.value.isPlaying &&
+                                            !stepData.autoAdvanceAfterMediaEnds;
+
+          if ((_isTutorialActive && _isTutorialSpeaking && currentDataSource.length > 1) || 
+              (_isTutorialActive && !_isTutorialSpeaking && isVideoPlayingNoAutoAdvance)) { // Allow skip if video is playing and user taps
             _handleTutorialSkip();
+          } else if (_isTutorialActive && _currentFeatureHelpSteps.isNotEmpty && currentDataSource.length == 1){
+            // If it's single-step feature help, tapping dismisses it.
+             _endTutorial();
           }
         },
-        behavior: HitTestBehavior.opaque, 
+        behavior: HitTestBehavior.opaque,
         child: Container(
-          color: Colors.black.withOpacity(0.85),
-          padding: const EdgeInsets.only(top: 150, bottom: 150, left: 30, right: 30),
-          child: Center(
-            child: SingleChildScrollView(
-              child: Text(
-                message,
-                textAlign: TextAlign.center,
-                style: const TextStyle( color: Colors.white, fontSize: 22, fontWeight: FontWeight.w600, height: 1.5,),
+          color: Colors.black.withOpacity(0.9),
+          padding: const EdgeInsets.symmetric(horizontal: 20.0).copyWith(
+            top: MediaQuery.of(context).padding.top + 20, // Account for status bar
+            bottom: MediaQuery.of(context).padding.bottom + 20, // Account for nav bar
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (stepData.mediaAssetPath != null) ...[
+                mediaWidget,
+                const SizedBox(height: 20),
+              ],
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Text(
+                    stepData.text,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20, // Slightly smaller for more text
+                      fontWeight: FontWeight.w500, // Adjusted weight
+                      height: 1.4,
+                    ),
+                  ),
+                ),
               ),
-            ),
+               if (stepData.mediaType == MediaType.video && _tutorialVideoController != null && _tutorialVideoController!.value.isInitialized)
+                 const SizedBox(height:10), // spacer for video controls if they were visible
+                 Padding(
+                   padding: const EdgeInsets.only(top: 15.0, bottom: 10.0),
+                   child: Text(
+                    _isTutorialSpeaking ? "Tap to skip" : (stepData.mediaType == MediaType.video && _tutorialVideoController?.value.isPlaying == true ? "Tap to skip video or text" : "Tap to continue"),
+                    style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 14),
+                                 ),
+                 ),
+            ],
           ),
         ),
       ),
     );
   }
-
   Widget _buildCameraDisplay() {
     if (_isMainCameraInitializing) {
       return Container(
