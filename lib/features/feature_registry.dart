@@ -14,7 +14,15 @@ const FeatureConfig supervisionFeature = FeatureConfig(
     'supervision',
     'analyze all',
     'smart analyze',
-    'everything'
+    'everything',
+    'look at everything',
+    'tell me everything',
+    'comprehensive scan',
+    'full analysis',
+    'general mode',
+    'overview',
+    'what do you see',
+    'start default mode'
   ],
   pageBuilder: _buildPlaceholderPage, // Placeholder
 );
@@ -29,7 +37,15 @@ const FeatureConfig objectDetectionFeature = FeatureConfig(
     'object detection',
     'detect object',
     'objects',
-    'object'
+    'object',
+    'identify objects',
+    'what are these objects',
+    'find objects',
+    'recognize objects',
+    'list objects',
+    'what is this',
+    'object identifier',
+    'tell me what is in front of me'
   ],
   pageBuilder: _buildPlaceholderPage, // Placeholder
 );
@@ -45,14 +61,23 @@ const FeatureConfig hazardDetectionFeature = FeatureConfig(
     'danger',
     'alert',
     'hazards',
-    'hazard detection'
+    'hazard detection',
+    'detect danger',
+    'scan for hazards',
+    'look for obstacles',
+    'is it safe',
+    'safety check',
+    'warn me',
+    'check for dangers',
+    'obstacle detection',
+    'alert me to danger'
   ],
   pageBuilder: _buildPlaceholderPage, // Placeholder
 );
 
 const FeatureConfig focusModeFeature = FeatureConfig(
   id: 'focus_mode',
-  title: 'Object Finder',
+  title: 'Metal Detector',
   color: Colors.deepPurpleAccent,
   voiceCommandKeywords: [
     'page 4',
@@ -62,7 +87,15 @@ const FeatureConfig focusModeFeature = FeatureConfig(
     'find object',
     'find',
     'locate',
-    'object finder'
+    'object finder',
+    'Metal Detection',
+    'metal detector',
+    'metal',
+    'search for',
+    'pinpoint',
+    'where is',
+    'item finder',
+    'specific object'
   ],
   pageBuilder: _buildPlaceholderPage, // Placeholder
 );
@@ -77,7 +110,15 @@ const FeatureConfig sceneDetectionFeature = FeatureConfig(
     'scene detection',
     'describe scene',
     'scene',
-    'room'
+    'room',
+    'describe my surroundings',
+    'what does it look like here',
+    'tell me about this place',
+    'environment description',
+    'describe the environment',
+    'where am I',
+    'scene recognition',
+    'explain what you see'
   ],
   pageBuilder: _buildPlaceholderPage, // Placeholder
 );
@@ -92,7 +133,16 @@ const FeatureConfig textDetectionFeature = FeatureConfig(
     'text detection',
     'read text',
     'text',
-    'read'
+    'read',
+    'read this for me',
+    'what does this say',
+    'scan text',
+    'recognize text',
+    'text reader',
+    'read aloud',
+    'OCR',
+    'read the sign',
+    'read document'
   ],
   pageBuilder: _buildPlaceholderPage, // Placeholder
 );
@@ -107,7 +157,17 @@ const FeatureConfig currencyDetectionFeature = FeatureConfig(
     'currency detection',
     'currency',
     'money',
-    'scan currency'
+    'scan currency',
+    'identify money',
+    'what bill is this',
+    'recognize currency',
+    'money identifier',
+    'check money',
+    'scan bill',
+    'cash',
+    'banknote',
+    'how much is this',
+    'how much money is this'
   ],
   pageBuilder: _buildPlaceholderPage, // Placeholder
 );
@@ -122,7 +182,10 @@ const FeatureConfig barcodeScannerFeature = FeatureConfig(
     'barcode',
     'scan code',
     'scanner',
-    'scan barcode'
+    'scan barcode',
+    'scan product',
+    'scan item',
+    'scan package'
   ],
   pageBuilder: _buildPlaceholderPage, // Placeholder
 );
