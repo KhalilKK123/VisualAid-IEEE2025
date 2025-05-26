@@ -11,25 +11,31 @@ class TextDetectionPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: Colors.transparent,
-      alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(horizontal: 20.0),
-      child: Text(
-        detectionResult.replaceAll('_', ' '),
-        style: const TextStyle(
-          fontSize: 24, 
-          fontWeight: FontWeight.bold,
-          color: Colors.white, 
-          shadows: [ 
-            Shadow(
-              blurRadius: 8.0,
-              color: Colors.black87, 
-              offset: Offset(2.0, 2.0),
-            ),
-          ],
+
+    return Padding(
+      padding: const EdgeInsets.only(
+        top: 255.0,     
+        left: 20.0,     
+        right: 20.0,    
+        bottom: 170.0,  
+      ),
+      child: SingleChildScrollView(
+        child: Text(
+          detectionResult.isEmpty ? "No text detected." : detectionResult.replaceAll('_', ' '),
+          style: const TextStyle(
+            fontSize: 24, 
+            fontWeight: FontWeight.bold, 
+            color: Colors.white, 
+            shadows: [ 
+              Shadow(
+                blurRadius: 8.0,
+                color: Colors.black87, 
+                offset: Offset(2.0, 2.0),
+              ),
+            ],
+          ),
+          textAlign: TextAlign.center, 
         ),
-        textAlign: TextAlign.center,
       ),
     );
   }

@@ -712,7 +712,7 @@ bool _isVideoBuffering = false;
       case 'hazard_detection':
         return [TutorialStepData(text: "Hazard Detection: This feature runs in real-time. It automatically alerts you to potential hazards with sound and vibration. No button tap needed for detection. Long press the action button for general voice commands.")];
       case 'focus_mode':
-        return [TutorialStepData(text: "Object Finder: Tap the main action button, then clearly say the name of the object you're looking for. The app will then use sounds and vibrations to guide you as the object comes into view and gets closer to the center.")];
+        return [TutorialStepData(text: "Metal Detector: Tap the main action button, then clearly say the name of the object you're looking for. The app will then use sounds and vibrations to guide you as the object comes into view and gets closer to the center.")];
       case 'scene_detection':
         return [TutorialStepData(text: "Scene Description: Point your camera at the scene you want described, then tap the main action button. The app will analyze and describe it. Long press for voice commands.")];
       case 'text_detection':
@@ -2516,11 +2516,11 @@ Future<void> _navigateToSettingsPage() async {
       if (_cameraController != null || _isMainCameraInitializing) {
         debugPrint("[Nav] Switching TO initial focus - Speaking TTS then disposing main camera...");
         // TTS for focus prompt uses current language (which would be global or OCR lang if coming from TextRec)
-        if (_ttsInitialized) await _ttsService.speak("Object finder. Tap the button, then say the object name.");
+        if (_ttsInitialized) await _ttsService.speak("Metal Detector. Tap the button, then say the object name.");
         await _disposeMainCameraController(); 
         debugPrint("[Nav] Main camera disposed after TTS for focus.");
       } else {
-        if (_ttsInitialized) await _ttsService.speak("Object finder. Tap the button, then say the object name.");
+        if (_ttsInitialized) await _ttsService.speak("Metal Detector. Tap the button, then say the object name.");
       }
     }
     else if (isSwitchingToBarcode) {
