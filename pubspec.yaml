@@ -59,6 +59,7 @@ dependencies:
   video_player: ^2.8.2
   # Logging
   logging: ^1.2.0
+  rename_app: ^1.6.3
 
 dev_dependencies:
   flutter_test:
