@@ -1,4 +1,7 @@
+// ignore_for_file: deprecated_member_use
+
 import 'dart:async';
+// ignore: unused_import
 import 'dart:convert'; // For json decoding in websocket handler (if needed)
 import 'dart:math'; // For proximity calculation
 
@@ -13,7 +16,6 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:vibration/vibration.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player/video_player.dart';
-
 
 import '../../core/models/feature_config.dart';
 import '../../core/services/websocket_service.dart';
@@ -38,25 +40,15 @@ import '../widgets/action_button.dart';
 import 'settings_screen.dart';
 // --- Imports End -----------------------------------------------------------------------------------------
 
-
-
-
-
-
-
-
-
-
-
 enum MediaType { image, gif, video }
 
 class TutorialStepData {
   final String text;
-  final String? mediaAssetPath; 
+  final String? mediaAssetPath;
   final MediaType? mediaType;
-  final bool autoAdvanceAfterMediaEnds; 
-  final double? mediaHeight; 
-  final BoxFit mediaFit; 
+  final bool autoAdvanceAfterMediaEnds;
+  final double? mediaHeight;
+  final BoxFit mediaFit;
 
   TutorialStepData({
     required this.text,
@@ -64,19 +56,10 @@ class TutorialStepData {
     this.mediaType,
     this.autoAdvanceAfterMediaEnds = false,
     this.mediaHeight,
-    this.mediaFit = BoxFit.contain, 
+    this.mediaFit = BoxFit.contain,
   });
 }
 // --- END MOVED DEFINITIONS ---
-
-
-
-
-
-
-
-
-
 
 class HomeScreen extends StatefulWidget {
   final CameraDescription? camera;
@@ -112,8 +95,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _ttsInitialized = false;
   String _selectedOcrLanguage = SettingsService.getValidatedDefaultLanguage();
   String _selectedObjectCategory = defaultObjectCategory;
-  String? _globalTtsLanguageSetting = 'en-US'; // Default TTS language to revert to. 'en-US' is a fallback.
-
+  String? _globalTtsLanguageSetting =
+      'en-US'; // Default TTS language to revert to. 'en-US' is a fallback.
 
   // Detection Results & State (for dedicated pages)
   String _lastObjectResult = "";
@@ -158,16 +141,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _hasVibrator = false;
   bool? _hasAmplitudeControl;
 
-  
-
-  
-  
-  
-  
-  
-  
-  
-  
   // --- Constants ------------------------------------------------------------------------------------------
   static const String _alertSoundPath = "audio/alert.mp3";
   static const String _beepSoundPath = "assets/audio/short_beep.mp3";
@@ -208,18 +181,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   static const String _hasRunBeforeKey =
       'has_run_before'; // to check if run before
 
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
   // --- Tutorial State Variables ---
   // bool _isTutorialActive = false;
   // int _currentTutorialStep = 0;
@@ -229,22 +190,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   // bool _isTutorialSpeaking = false; // To manage TTS during tutorial
   // bool _isSkipping = false;
 
-
-
-  bool _isTutorialActive = false; 
+  bool _isTutorialActive = false;
   int _currentTutorialStep = 0;
-  List<TutorialStepData> _tutorialStepsData = []; 
-  List<TutorialStepData> _currentFeatureHelpSteps = []; 
-  bool _isFirstRun = true; 
-  bool _isTutorialSpeaking = false; 
+  List<TutorialStepData> _tutorialStepsData = [];
+  List<TutorialStepData> _currentFeatureHelpSteps = [];
+  bool _isFirstRun = true;
+  bool _isTutorialSpeaking = false;
   bool _isSkipping = false;
 
-VideoPlayerController? _tutorialVideoController;
-Future<void>? _initializeVideoPlayerFuture;
-bool _isVideoBuffering = false;
-
-
-
+  VideoPlayerController? _tutorialVideoController;
+  Future<void>? _initializeVideoPlayerFuture;
+  bool _isVideoBuffering = false;
 
   // --- Lifecycle Methods ------------------------------------------------------------------------------------
   @override
@@ -291,47 +247,38 @@ bool _isVideoBuffering = false;
     }
   }
 
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
   // --- Initialization Helper -----------------------------------------------------------------------------------
   Future<void> _initializeApp() async {
     _initializeFeatures();
 
-  // Load OCR lang and TTS V/P/R settings first
-  final initialSettings = await Future.wait([
-    _settingsService.getOcrLanguage(),
-    _settingsService.getTtsVolume(),
-    _settingsService.getTtsPitch(),
-    _settingsService.getTtsRate(),
-    _settingsService.getObjectDetectionCategory(),
-  ]);
-  _selectedOcrLanguage = initialSettings[0] as String;
-  final ttsVolume = initialSettings[1] as double;
-  final ttsPitch = initialSettings[2] as double;
-  final ttsRate = initialSettings[3] as double;
-  _selectedObjectCategory = initialSettings[4] as String;
+    // Load OCR lang and TTS V/P/R settings first
+    final initialSettings = await Future.wait([
+      _settingsService.getOcrLanguage(),
+      _settingsService.getTtsVolume(),
+      _settingsService.getTtsPitch(),
+      _settingsService.getTtsRate(),
+      _settingsService.getObjectDetectionCategory(),
+    ]);
+    _selectedOcrLanguage = initialSettings[0] as String;
+    final ttsVolume = initialSettings[1] as double;
+    final ttsPitch = initialSettings[2] as double;
+    final ttsRate = initialSettings[3] as double;
+    _selectedObjectCategory = initialSettings[4] as String;
 
-  if (!_ttsInitialized) {
-    await _ttsService.initTts(
-        initialVolume: ttsVolume,
-        initialPitch: ttsPitch,
-        initialRate: ttsRate);
-    _ttsInitialized = true;
-    // Set initial global TTS language right after TTS init
-    await _ttsService.setSpeechLanguage(_globalTtsLanguageSetting);
-    debugPrint("[TTS Lang] Initial app TTS language set to global: '$_globalTtsLanguageSetting'");
-  } else {
-     // If already initialized, update V,P,R but language is handled by page logic
-    await _ttsService.updateSettings(ttsVolume, ttsPitch, ttsRate);
-  }
+    if (!_ttsInitialized) {
+      await _ttsService.initTts(
+          initialVolume: ttsVolume,
+          initialPitch: ttsPitch,
+          initialRate: ttsRate);
+      _ttsInitialized = true;
+      // Set initial global TTS language right after TTS init
+      await _ttsService.setSpeechLanguage(_globalTtsLanguageSetting);
+      debugPrint(
+          "[TTS Lang] Initial app TTS language set to global: '$_globalTtsLanguageSetting'");
+    } else {
+      // If already initialized, update V,P,R but language is handled by page logic
+      await _ttsService.updateSettings(ttsVolume, ttsPitch, ttsRate);
+    }
 
     await _loadAndInitializeSettings();
     await _checkVibratorAndAmplitude();
@@ -395,43 +342,46 @@ bool _isVideoBuffering = false;
         "[HomeScreen] Features Initialized: ${_features.map((f) => f.id).toList()}");
   }
 
- Future<void> _loadAndInitializeSettings() async {
-  // This function is primarily called when returning from settings.
-  // It re-loads OCR language and TTS V/P/R.
-  // TTS language itself will be re-evaluated based on current page context after this.
-  final results = await Future.wait([
-    _settingsService.getOcrLanguage(),
-    _settingsService.getTtsVolume(),
-    _settingsService.getTtsPitch(),
-    _settingsService.getTtsRate(),
-    _settingsService.getObjectDetectionCategory(),
-  ]);
-  _selectedOcrLanguage = results[0] as String;
-  final ttsVolume = results[1] as double;
-  final ttsPitch = results[2] as double;
-  final ttsRate = results[3] as double;
-  _selectedObjectCategory = results[4] as String;
+  Future<void> _loadAndInitializeSettings() async {
+    // This function is primarily called when returning from settings.
+    // It re-loads OCR language and TTS V/P/R.
+    // TTS language itself will be re-evaluated based on current page context after this.
+    final results = await Future.wait([
+      _settingsService.getOcrLanguage(),
+      _settingsService.getTtsVolume(),
+      _settingsService.getTtsPitch(),
+      _settingsService.getTtsRate(),
+      _settingsService.getObjectDetectionCategory(),
+    ]);
+    _selectedOcrLanguage = results[0] as String;
+    final ttsVolume = results[1] as double;
+    final ttsPitch = results[2] as double;
+    final ttsRate = results[3] as double;
+    _selectedObjectCategory = results[4] as String;
 
-  if (!_ttsInitialized) { // Should not happen if returning from settings, but good for robustness
-    await _ttsService.initTts(
-        initialVolume: ttsVolume,
-        initialPitch: ttsPitch,
-        initialRate: ttsRate);
-    _ttsInitialized = true;
-    await _ttsService.setSpeechLanguage(_globalTtsLanguageSetting); // Set to global if first time
-  } else {
-    await _ttsService.updateSettings(ttsVolume, ttsPitch, ttsRate);
-    // TTS language is NOT set here directly, it will be handled by the calling context
-    // (e.g., in _navigateToSettingsPage's return block)
+    if (!_ttsInitialized) {
+      // Should not happen if returning from settings, but good for robustness
+      await _ttsService.initTts(
+          initialVolume: ttsVolume,
+          initialPitch: ttsPitch,
+          initialRate: ttsRate);
+      _ttsInitialized = true;
+      await _ttsService.setSpeechLanguage(
+          _globalTtsLanguageSetting); // Set to global if first time
+    } else {
+      await _ttsService.updateSettings(ttsVolume, ttsPitch, ttsRate);
+      // TTS language is NOT set here directly, it will be handled by the calling context
+      // (e.g., in _navigateToSettingsPage's return block)
+    }
+    debugPrint(
+        "[HomeScreen] Settings loaded/reloaded. OCR: $_selectedOcrLanguage, Cat: $_selectedObjectCategory");
   }
-  debugPrint("[HomeScreen] Settings loaded/reloaded. OCR: $_selectedOcrLanguage, Cat: $_selectedObjectCategory");
-}
 
   Future<void> _checkVibratorAndAmplitude() async {
     try {
-      _hasVibrator = await Vibration.hasVibrator() ?? false;
+      _hasVibrator = await Vibration.hasVibrator();
       if (_hasVibrator) {
-        _hasAmplitudeControl = await Vibration.hasAmplitudeControl() ?? false;
+        _hasAmplitudeControl = await Vibration.hasAmplitudeControl();
       } else {
         _hasAmplitudeControl = false;
       }
@@ -454,91 +404,123 @@ bool _isVideoBuffering = false;
     }
   }
 
-
-
-
-
-
-
-
-
-
-
 // --- Tutorial Logic ---
 
   void _initializeTutorialContent() {
     // Example: Replace with your actual asset paths and desired media types
     _tutorialStepsData = [
       TutorialStepData(
-        text: "Welcome to Vision Aid.",
-        mediaAssetPath: "assets/tutorial_media/app_logo.jpg", // Placeholder - REPLACE
+        text: "Welcome to Blink AI.",
+        mediaAssetPath:
+            "assets/tutorial_media/app_logo.jpg", // Placeholder - REPLACE
         mediaType: MediaType.image,
         mediaHeight: 120,
       ),
       TutorialStepData(
-        text: "This app is designed to help you understand your surroundings using your phone's camera and advanced analysis.",
+        text:
+            "This app is designed to help you understand your surroundings using your phone's camera and advanced analysis.",
       ),
       TutorialStepData(
         text: "Let's quickly go over the app's interface.",
       ),
       TutorialStepData(
-        text: "At the top, you'll see the title of the currently selected feature, like 'Object Detection'.",
-        mediaAssetPath: "assets/tutorial_media/feature_title_example.png", // Placeholder - REPLACE
+        text:
+            "At the top, you'll see the title of the currently selected feature, like 'Object Detection'.",
+        mediaAssetPath:
+            "assets/tutorial_media/feature_title_example.png", // Placeholder - REPLACE
         mediaType: MediaType.image,
         mediaHeight: 200,
         mediaFit: BoxFit.fitWidth,
       ),
       TutorialStepData(
         text: "At the bottom center is the main action button.",
-        mediaAssetPath: "assets/tutorial_media/action_button_example.gif", // Placeholder - REPLACE
+        mediaAssetPath:
+            "assets/tutorial_media/action_button_example.gif", // Placeholder - REPLACE
         mediaType: MediaType.gif,
         mediaHeight: 150,
       ),
       TutorialStepData(
-        text: "For features like Text Recognition or Scene Description, tapping this button will capture an image and process it.",
+        text:
+            "For features like Text Recognition or Scene Description, tapping this button will capture an image and process it.",
       ),
       TutorialStepData(
-        text: "Long-pressing this button activates voice commands, allowing you to switch features or change settings by speaking.",
+        text:
+            "Long-pressing this button activates voice commands, allowing you to switch features or change settings by speaking.",
       ),
       TutorialStepData(
-        text: "On the left and right edges of the screen, you'll find arrow buttons.",
-        mediaAssetPath: "assets/tutorial_media/navigation_arrows_example.mp4", // Placeholder - REPLACE
+        text:
+            "On the left and right edges of the screen, you'll find arrow buttons.",
+        mediaAssetPath:
+            "assets/tutorial_media/navigation_arrows_example.mp4", // Placeholder - REPLACE
         mediaType: MediaType.video,
-        autoAdvanceAfterMediaEnds: false, // Set to true if you want auto-advance after video
+        autoAdvanceAfterMediaEnds:
+            false, // Set to true if you want auto-advance after video
         mediaHeight: 250,
       ),
       TutorialStepData(
-        text: "You can tap these to navigate to the previous or next feature. You can also swipe left or right anywhere on the screen to change features.",
+        text:
+            "You can tap these to navigate to the previous or next feature. You can also swipe left or right anywhere on the screen to change features.",
       ),
       TutorialStepData(
-        text: "In the top right corner, the gear icon opens the settings screen. Here, you can adjust voice speed, language for text recognition, and object detection filters. you can also chnage the object detection filters to filter what types of objects are detected, uisng voice commands, just hold the main action button and say the phrase \" category \" then name your category.",
-        mediaAssetPath: "assets/tutorial_media/settings_icon_example.png", // Placeholder - REPLACE
+        text:
+            "In the top right corner, the gear icon opens the settings screen. Here, you can adjust voice speed, language for text recognition, and object detection filters. you can also chnage the object detection filters to filter what types of objects are detected, uisng voice commands, just hold the main action button and say the phrase \" category \" then name your category.",
+        mediaAssetPath:
+            "assets/tutorial_media/settings_icon_example.png", // Placeholder - REPLACE
         mediaType: MediaType.image,
         mediaHeight: 80,
       ),
       TutorialStepData(
-        text: "And in the top left corner, you'll see a question mark icon. That's the tutorial button! Tap it anytime for a quick explanation of the current feature. Long-press it to replay this full tutorial.",
-        mediaAssetPath: "assets/tutorial_media/tutorial_button_example.png", // Placeholder - REPLACE
+        text:
+            "And in the top left corner, you'll see a question mark icon. That's the tutorial button! Tap it anytime for a quick explanation of the current feature. Long-press it to replay this full tutorial.",
+        mediaAssetPath:
+            "assets/tutorial_media/tutorial_button_example.png", // Placeholder - REPLACE
         mediaType: MediaType.image,
         mediaHeight: 80,
       ),
       TutorialStepData(
-        text: "Vision Aid offers several powerful features. Let's explore them.",
+        text: "Blink AI offers several powerful features. Let's explore them.",
       ),
-      TutorialStepData(text: "SuperVision: This is our middleware feature, for your convenience. When on the SuperVision page, tap the main action button. It analyzes the camera view using AI, and, based on the analysis, it might include identifying objects, describing the scene, reading text, or even alerting you to hazards it finds."),
-      TutorialStepData(text: "Object Detection: This feature works in real-time. As you point your phone around, it will continuously identify and announce objects it sees. You can filter what types of objects are detected in the settings menu."),
-      TutorialStepData(text: "Hazard Detection: This feature also works in real-time to alert you to potential hazards, such as cars or specific items that could be dangerous. If a hazard is detected, the app will make a sound and vibrate."),
-      TutorialStepData(text: "Object Finder: First, tap the main action button. The app will ask you to say the name of the object you want to find. After you say the object's name, the app will use sound and vibration to help guide you towards it as it's detected in the camera's view."),
-      TutorialStepData(text: "Scene Description: Point your phone towards an area you want to understand better, then tap the main action button. The app will process the image and describe the scene to you."),
-      TutorialStepData(text: "Text Recognition: If you want to read text from a document, sign, or product, point your phone at the text and tap the main action button. The app will read the detected text aloud. You can change the language for text recognition in the settings."),
-      TutorialStepData(text: "Currency Detection: Tap the main action button when on the currency page. The app will analyze the image and announce the detected currency."),
-      TutorialStepData(text: "Barcode Scanner: This feature activates automatically when you navigate to its page. Simply point your camera at a barcode. The app will scan it and, if the product is in its database, tell you the product information."),
-      TutorialStepData(text: "To navigate between these features, you have a few options."),
-      TutorialStepData(text: "You can swipe left or right anywhere on the main part of the screen."),
-      TutorialStepData(text: "You can tap the large arrow buttons that appear on the left and right sides of the screen."),
-      TutorialStepData(text: "Or, you can use voice commands. Long-press the main action button at the bottom, wait for the prompt, and then say the feature name like 'object detection', 'go to page 3', or 'barcode scanner'. You can also say 'settings' to go to the settings page."),
-      TutorialStepData(text: "Remember, if you ever need a quick reminder on how to use the feature you're currently on, just tap the question mark button in the top left. To hear this full tutorial again, long-press that same question mark button."),
-      TutorialStepData(text: "This concludes the main tutorial. We hope Vision Aid empowers you to explore your world with greater confidence. Happy exploring!"),
+      TutorialStepData(
+          text:
+              "SuperVision: This is our middleware feature, for your convenience. When on the SuperVision page, tap the main action button. It analyzes the camera view using AI, and, based on the analysis, it might include identifying objects, describing the scene, reading text, or even alerting you to hazards it finds."),
+      TutorialStepData(
+          text:
+              "Object Detection: This feature works in real-time. As you point your phone around, it will continuously identify and announce objects it sees. You can filter what types of objects are detected in the settings menu."),
+      TutorialStepData(
+          text:
+              "Hazard Detection: This feature also works in real-time to alert you to potential hazards, such as cars or specific items that could be dangerous. If a hazard is detected, the app will make a sound and vibrate."),
+      TutorialStepData(
+          text:
+              "Object Finder: First, tap the main action button. The app will ask you to say the name of the object you want to find. After you say the object's name, the app will use sound and vibration to help guide you towards it as it's detected in the camera's view."),
+      TutorialStepData(
+          text:
+              "Scene Description: Point your phone towards an area you want to understand better, then tap the main action button. The app will process the image and describe the scene to you."),
+      TutorialStepData(
+          text:
+              "Text Recognition: If you want to read text from a document, sign, or product, point your phone at the text and tap the main action button. The app will read the detected text aloud. You can change the language for text recognition in the settings."),
+      TutorialStepData(
+          text:
+              "Currency Detection: Tap the main action button when on the currency page. The app will analyze the image and announce the detected currency."),
+      TutorialStepData(
+          text:
+              "Barcode Scanner: This feature activates automatically when you navigate to its page. Simply point your camera at a barcode. The app will scan it and, if the product is in its database, tell you the product information."),
+      TutorialStepData(
+          text: "To navigate between these features, you have a few options."),
+      TutorialStepData(
+          text:
+              "You can swipe left or right anywhere on the main part of the screen."),
+      TutorialStepData(
+          text:
+              "You can tap the large arrow buttons that appear on the left and right sides of the screen."),
+      TutorialStepData(
+          text:
+              "Or, you can use voice commands. Long-press the main action button at the bottom, wait for the prompt, and then say the feature name like 'object detection', 'go to page 3', or 'barcode scanner'. You can also say 'settings' to go to the settings page."),
+      TutorialStepData(
+          text:
+              "Remember, if you ever need a quick reminder on how to use the feature you're currently on, just tap the question mark button in the top left. To hear this full tutorial again, long-press that same question mark button."),
+      TutorialStepData(
+          text:
+              "This concludes the main tutorial. We hope Vision Aid empowers you to explore your world with greater confidence. Happy exploring!"),
     ];
   }
 
@@ -555,53 +537,77 @@ bool _isVideoBuffering = false;
 
   // Listener function needs to be defined to be removable and accessible
   void _videoListener() {
-    if (!mounted || !_isTutorialActive || _tutorialVideoController == null || !_tutorialVideoController!.value.isInitialized) {
+    if (!mounted ||
+        !_isTutorialActive ||
+        _tutorialVideoController == null ||
+        !_tutorialVideoController!.value.isInitialized) {
       // Clean up listener if state is no longer valid for it
       _tutorialVideoController?.removeListener(_videoListener);
       return;
     }
 
-    final currentDataSource = _currentFeatureHelpSteps.isNotEmpty ? _currentFeatureHelpSteps : _tutorialStepsData;
+    final currentDataSource = _currentFeatureHelpSteps.isNotEmpty
+        ? _currentFeatureHelpSteps
+        : _tutorialStepsData;
     if (_currentTutorialStep >= currentDataSource.length) {
-        _tutorialVideoController?.removeListener(_videoListener);
-        return;
+      _tutorialVideoController?.removeListener(_videoListener);
+      return;
     }
     final stepData = currentDataSource[_currentTutorialStep];
-    final int stepBeingListenedTo = _currentTutorialStep; // Capture for async safety
+    final int stepBeingListenedTo =
+        _currentTutorialStep; // Capture for async safety
 
-    final bool isVideoCompleted = _tutorialVideoController!.value.isInitialized && // Ensure initialized
-                                  _tutorialVideoController!.value.position >= _tutorialVideoController!.value.duration &&
-                                  !_tutorialVideoController!.value.isPlaying &&
-                                  !_tutorialVideoController!.value.isBuffering; // Ensure not just paused during buffering
+    final bool isVideoCompleted =
+        _tutorialVideoController!.value.isInitialized && // Ensure initialized
+            _tutorialVideoController!.value.position >=
+                _tutorialVideoController!.value.duration &&
+            !_tutorialVideoController!.value.isPlaying &&
+            !_tutorialVideoController!
+                .value.isBuffering; // Ensure not just paused during buffering
 
     if (isVideoCompleted) {
-      debugPrint("[Tutorial] Video Listener: Video completed for step $stepBeingListenedTo");
-      _tutorialVideoController!.removeListener(_videoListener); // Clean up listener for this video
+      debugPrint(
+          "[Tutorial] Video Listener: Video completed for step $stepBeingListenedTo");
+      _tutorialVideoController!
+          .removeListener(_videoListener); // Clean up listener for this video
 
       if (stepData.autoAdvanceAfterMediaEnds) {
-        debugPrint("[Tutorial] Video completed and autoAdvance is true. Advancing to next step.");
-        Future.delayed(const Duration(milliseconds: 150), () { // Short delay for smoother transition
-          if (mounted && _isTutorialActive && _currentTutorialStep == stepBeingListenedTo) {
+        debugPrint(
+            "[Tutorial] Video completed and autoAdvance is true. Advancing to next step.");
+        Future.delayed(const Duration(milliseconds: 150), () {
+          // Short delay for smoother transition
+          if (mounted &&
+              _isTutorialActive &&
+              _currentTutorialStep == stepBeingListenedTo) {
             _handleTutorialSkip(isAutoAdvance: true);
           }
         });
       } else {
-        debugPrint("[Tutorial] Video completed, autoAdvance is false. Speaking text if any for step $stepBeingListenedTo.");
-        if (mounted && _isTutorialActive && _currentTutorialStep == stepBeingListenedTo) {
-          _isTutorialSpeaking = stepData.text.isNotEmpty; // Allow TTS for the text part of this video step
-          if(mounted) setState((){}); // Update UI to reflect potential change in "tap to skip" message
-          _speakTutorialStepText(stepData, stepBeingListenedTo, currentDataSource);
+        debugPrint(
+            "[Tutorial] Video completed, autoAdvance is false. Speaking text if any for step $stepBeingListenedTo.");
+        if (mounted &&
+            _isTutorialActive &&
+            _currentTutorialStep == stepBeingListenedTo) {
+          _isTutorialSpeaking = stepData.text
+              .isNotEmpty; // Allow TTS for the text part of this video step
+          if (mounted)
+            setState(
+                () {}); // Update UI to reflect potential change in "tap to skip" message
+          _speakTutorialStepText(
+              stepData, stepBeingListenedTo, currentDataSource);
         }
       }
     }
   }
-  
+
   Future<void> _disposeTutorialVideoController() async {
     if (_tutorialVideoController != null) {
-      debugPrint("[Tutorial] Disposing tutorial video controller (DataSource: ${_tutorialVideoController?.dataSource})");
+      debugPrint(
+          "[Tutorial] Disposing tutorial video controller (DataSource: ${_tutorialVideoController?.dataSource})");
       final controllerToDispose = _tutorialVideoController;
       _tutorialVideoController = null; // Nullify immediately
-      controllerToDispose?.removeListener(_videoListener); // Remove listener before dispose
+      controllerToDispose
+          ?.removeListener(_videoListener); // Remove listener before dispose
       await controllerToDispose?.pause();
       await controllerToDispose?.dispose();
       if (mounted) {
@@ -617,65 +623,80 @@ bool _isVideoBuffering = false;
     }
   }
 
-
   void _startFullTutorial({bool isAutoStart = false}) async {
-    debugPrint("[Tutorial] _startFullTutorial CALLED. isAutoStart: $isAutoStart, Mounted: $mounted, TTS Initialized: $_ttsInitialized, isFirstRun: $_isFirstRun");
+    debugPrint(
+        "[Tutorial] _startFullTutorial CALLED. isAutoStart: $isAutoStart, Mounted: $mounted, TTS Initialized: $_ttsInitialized, isFirstRun: $_isFirstRun");
     _stopDetectionTimer(); // <<< ADD OR ENSURE THIS IS PRESENT AND EARLY
     if (!mounted) {
       debugPrint("[Tutorial] _startFullTutorial aborted: Not mounted.");
       return;
     }
     if (!_ttsInitialized) {
-      debugPrint("[Tutorial] _startFullTutorial aborted: TTS not initialized. Attempting init...");
+      debugPrint(
+          "[Tutorial] _startFullTutorial aborted: TTS not initialized. Attempting init...");
       final initialSettings = await Future.wait([
-          _settingsService.getTtsVolume(), _settingsService.getTtsPitch(), _settingsService.getTtsRate()
+        _settingsService.getTtsVolume(),
+        _settingsService.getTtsPitch(),
+        _settingsService.getTtsRate()
       ]);
 
-  
-
-      await _ttsService.initTts(initialVolume: initialSettings[0], initialPitch: initialSettings[1], initialRate: initialSettings[2]);
-      _ttsInitialized = true; 
-      await _ttsService.setSpeechLanguage(_globalTtsLanguageSetting); 
-      debugPrint("[Tutorial] Fallback TTS initialization attempted. TTS Initialized: $_ttsInitialized");
-      if (!_ttsInitialized) return; 
+      await _ttsService.initTts(
+          initialVolume: initialSettings[0],
+          initialPitch: initialSettings[1],
+          initialRate: initialSettings[2]);
+      _ttsInitialized = true;
+      await _ttsService.setSpeechLanguage(_globalTtsLanguageSetting);
+      debugPrint(
+          "[Tutorial] Fallback TTS initialization attempted. TTS Initialized: $_ttsInitialized");
+      if (!_ttsInitialized) return;
     }
 
-    await _disposeTutorialVideoController(); 
+    await _disposeTutorialVideoController();
 
     if (_isTutorialActive && _isTutorialSpeaking) {
-      debugPrint("[Tutorial] Full tutorial requested while another was active and speaking. Stopping current TTS.");
+      debugPrint(
+          "[Tutorial] Full tutorial requested while another was active and speaking. Stopping current TTS.");
       await _ttsService.stop();
     } else if (_isTutorialActive && _tutorialVideoController != null) {
-        debugPrint("[Tutorial] Full tutorial requested while a video might be playing. Disposing video.");
-        await _disposeTutorialVideoController(); // Ensure video stops if tutorial was active but not speaking
+      debugPrint(
+          "[Tutorial] Full tutorial requested while a video might be playing. Disposing video.");
+      await _disposeTutorialVideoController(); // Ensure video stops if tutorial was active but not speaking
     }
 
-
     if (isAutoStart && !_isFirstRun) {
-      debugPrint("[Tutorial] _startFullTutorial (auto): Not a first run, skipping auto-start.");
+      debugPrint(
+          "[Tutorial] _startFullTutorial (auto): Not a first run, skipping auto-start.");
       return;
     }
 
-    debugPrint("[Tutorial] Proceeding with _startFullTutorial. Current _isTutorialActive: $_isTutorialActive");
-    
-    await _ttsService.stop(); 
-    debugPrint("[Tutorial] TTS explicitly stopped. TTS Service isPlaying: ${_ttsService.isPlaying}, ttsState: ${_ttsService.ttsState}");
+    debugPrint(
+        "[Tutorial] Proceeding with _startFullTutorial. Current _isTutorialActive: $_isTutorialActive");
 
-    _currentFeatureHelpSteps = []; 
-    
+    await _ttsService.stop();
+    debugPrint(
+        "[Tutorial] TTS explicitly stopped. TTS Service isPlaying: ${_ttsService.isPlaying}, ttsState: ${_ttsService.ttsState}");
+
+    _currentFeatureHelpSteps = [];
+
     if (_tutorialStepsData.isEmpty) {
-        debugPrint("[Tutorial] _tutorialStepsData is EMPTY in _startFullTutorial. Re-initializing it now.");
-        _initializeTutorialContent(); // This should populate _tutorialStepsData
-        debugPrint("[Tutorial] _startFullTutorial: _tutorialStepsData length after re-init: ${_tutorialStepsData.length}");
-        if (_tutorialStepsData.isEmpty) {
-            debugPrint("[Tutorial] CRITICAL: _tutorialStepsData STILL EMPTY after re-init. Aborting full tutorial.");
-            if(mounted) {
-              setState(() { _isTutorialActive = false; }); 
-            }
-            return;
+      debugPrint(
+          "[Tutorial] _tutorialStepsData is EMPTY in _startFullTutorial. Re-initializing it now.");
+      _initializeTutorialContent(); // This should populate _tutorialStepsData
+      debugPrint(
+          "[Tutorial] _startFullTutorial: _tutorialStepsData length after re-init: ${_tutorialStepsData.length}");
+      if (_tutorialStepsData.isEmpty) {
+        debugPrint(
+            "[Tutorial] CRITICAL: _tutorialStepsData STILL EMPTY after re-init. Aborting full tutorial.");
+        if (mounted) {
+          setState(() {
+            _isTutorialActive = false;
+          });
         }
+        return;
+      }
     } else {
-        debugPrint("[Tutorial] _startFullTutorial: _tutorialStepsData already populated. Length: ${_tutorialStepsData.length}");
+      debugPrint(
+          "[Tutorial] _startFullTutorial: _tutorialStepsData already populated. Length: ${_tutorialStepsData.length}");
     }
 
     if (mounted) {
@@ -685,20 +706,22 @@ bool _isVideoBuffering = false;
         // _isTutorialSpeaking will be determined by _playNextTutorialStep based on the first step's content
       });
     } else {
-      debugPrint("[Tutorial] _startFullTutorial aborted after checks: Not mounted before setState.");
+      debugPrint(
+          "[Tutorial] _startFullTutorial aborted after checks: Not mounted before setState.");
       return;
     }
 
-    if (isAutoStart || _isFirstRun) { 
-      if (isAutoStart && _isFirstRun) { 
-         await _markTutorialAsCompleted();
+    if (isAutoStart || _isFirstRun) {
+      if (isAutoStart && _isFirstRun) {
+        await _markTutorialAsCompleted();
       } else if (!isAutoStart && _isFirstRun) {
-          await _markTutorialAsCompleted();
+        await _markTutorialAsCompleted();
       }
     }
-    
-    debugPrint("[Tutorial] _startFullTutorial about to call _playNextTutorialStep with _tutorialStepsData.");
-    _playNextTutorialStep(dataSource: _tutorialStepsData); 
+
+    debugPrint(
+        "[Tutorial] _startFullTutorial about to call _playNextTutorialStep with _tutorialStepsData.");
+    _playNextTutorialStep(dataSource: _tutorialStepsData);
   }
 
   List<TutorialStepData> _getFeatureSpecificHelpSteps(String featureId) {
@@ -706,23 +729,59 @@ bool _isVideoBuffering = false;
     // Ensure it returns List<TutorialStepData>
     switch (featureId) {
       case 'supervision':
-        return [TutorialStepData(text: "SuperVision: Tap the main action button at the bottom. The app will then analyze what the camera sees and provide a smart description using AI, through automatically identifying what the camera sees. Long press the action button for general voice commands.")];
+        return [
+          TutorialStepData(
+              text:
+                  "SuperVision: Tap the main action button at the bottom. The app will then analyze what the camera sees and provide a smart description using AI, through automatically identifying what the camera sees. Long press the action button for general voice commands.")
+        ];
       case 'object_detection':
-        return [TutorialStepData(text: "Object Detection: This feature runs in real-time. Point your camera, and it will announce recognized objects. No need to tap the button unless you want to use voice commands via long press. You can filter object categories in settings.")];
+        return [
+          TutorialStepData(
+              text:
+                  "Object Detection: This feature runs in real-time. Point your camera, and it will announce recognized objects. No need to tap the button unless you want to use voice commands via long press. You can filter object categories in settings.")
+        ];
       case 'hazard_detection':
-        return [TutorialStepData(text: "Hazard Detection: This feature runs in real-time. It automatically alerts you to potential hazards with sound and vibration. No button tap needed for detection. Long press the action button for general voice commands.")];
+        return [
+          TutorialStepData(
+              text:
+                  "Hazard Detection: This feature runs in real-time. It automatically alerts you to potential hazards with sound and vibration. No button tap needed for detection. Long press the action button for general voice commands.")
+        ];
       case 'focus_mode':
-        return [TutorialStepData(text: "Metal Detector: Tap the main action button, then clearly say the name of the object you're looking for. The app will then use sounds and vibrations to guide you as the object comes into view and gets closer to the center.")];
+        return [
+          TutorialStepData(
+              text:
+                  "Metal Detector: Tap the main action button, then clearly say the name of the object you're looking for. The app will then use sounds and vibrations to guide you as the object comes into view and gets closer to the center.")
+        ];
       case 'scene_detection':
-        return [TutorialStepData(text: "Scene Description: Point your camera at the scene you want described, then tap the main action button. The app will analyze and describe it. Long press for voice commands.")];
+        return [
+          TutorialStepData(
+              text:
+                  "Scene Description: Point your camera at the scene you want described, then tap the main action button. The app will analyze and describe it. Long press for voice commands.")
+        ];
       case 'text_detection':
-        return [TutorialStepData(text: "Text Recognition: Point your camera at the text you want to read, then tap the main action button. The app will detect and read the text aloud. Change OCR language in settings. Long press for voice commands.")];
+        return [
+          TutorialStepData(
+              text:
+                  "Text Recognition: Point your camera at the text you want to read, then tap the main action button. The app will detect and read the text aloud. Change OCR language in settings. Long press for voice commands.")
+        ];
       case 'currency_detection':
-        return [TutorialStepData(text: "Currency Detection: Tap the main action button when on the currency page. The app will analyze the image and announce the detected currency.")];
+        return [
+          TutorialStepData(
+              text:
+                  "Currency Detection: Tap the main action button when on the currency page. The app will analyze the image and announce the detected currency.")
+        ];
       case 'barcode_scanner':
-        return [TutorialStepData(text: "Barcode Scanner: This activates automatically on this page. Point your camera at a barcode to scan it. The app will announce product information if found. No button tap needed for scanning.")];
+        return [
+          TutorialStepData(
+              text:
+                  "Barcode Scanner: This activates automatically on this page. Point your camera at a barcode to scan it. The app will announce product information if found. No button tap needed for scanning.")
+        ];
       default:
-        return [TutorialStepData(text: "Help for this feature is not yet available. Tap the main action button or long press for voice commands.")];
+        return [
+          TutorialStepData(
+              text:
+                  "Help for this feature is not yet available. Tap the main action button or long press for voice commands.")
+        ];
     }
   }
 
@@ -734,15 +793,16 @@ bool _isVideoBuffering = false;
     if (_isTutorialActive && _isTutorialSpeaking) {
       await _ttsService.stop();
     } else if (_isTutorialActive && _tutorialVideoController != null) {
-        await _disposeTutorialVideoController();
+      await _disposeTutorialVideoController();
     }
-    
-    await _ttsService.stop(); 
 
-  _stopDetectionTimer(); // <<< ADD OR ENSURE THIS IS PRESENT AND EARLY
+    await _ttsService.stop();
+
+    _stopDetectionTimer(); // <<< ADD OR ENSURE THIS IS PRESENT AND EARLY
     await _disposeTutorialVideoController();
 
-    final currentFeature = _features[_currentPage.clamp(0, _features.length - 1)];
+    final currentFeature =
+        _features[_currentPage.clamp(0, _features.length - 1)];
     _currentFeatureHelpSteps = _getFeatureSpecificHelpSteps(currentFeature.id);
     // _tutorialStepsData = []; // DO NOT CLEAR _tutorialStepsData HERE. It's for the main tutorial.
 
@@ -755,26 +815,30 @@ bool _isVideoBuffering = false;
         // _isTutorialSpeaking will be set by _playNextTutorialStep
       });
     } else {
-        return;
+      return;
     }
-    _playNextTutorialStep(dataSource: _currentFeatureHelpSteps); 
+    _playNextTutorialStep(dataSource: _currentFeatureHelpSteps);
   }
 
- Future<void> _handleTutorialSkip({bool isAutoAdvance = false}) async {
+  Future<void> _handleTutorialSkip({bool isAutoAdvance = false}) async {
     if (!mounted || !_isTutorialActive || _isSkipping) return;
-    
+
     _isSkipping = true;
     final int stepSkippedFrom = _currentTutorialStep;
-    debugPrint("[Tutorial] Skip handling started for step $stepSkippedFrom. AutoAdvance: $isAutoAdvance");
+    debugPrint(
+        "[Tutorial] Skip handling started for step $stepSkippedFrom. AutoAdvance: $isAutoAdvance");
 
-    if (!isAutoAdvance) { 
+    if (!isAutoAdvance) {
       await _ttsService.stop();
-      await _disposeTutorialVideoController(); 
+      await _disposeTutorialVideoController();
     }
 
     _currentTutorialStep++;
 
-    final List<TutorialStepData> currentDataSource = _currentFeatureHelpSteps.isNotEmpty ? _currentFeatureHelpSteps : _tutorialStepsData;
+    final List<TutorialStepData> currentDataSource =
+        _currentFeatureHelpSteps.isNotEmpty
+            ? _currentFeatureHelpSteps
+            : _tutorialStepsData;
 
     if (mounted && _isTutorialActive) {
       if (_currentTutorialStep < currentDataSource.length) {
@@ -786,41 +850,48 @@ bool _isVideoBuffering = false;
       }
     }
     if (mounted) _isSkipping = false; // Reset skipping flag
-    // No need to call _startDetectionTimerIfNeeded() here directly, 
+    // No need to call _startDetectionTimerIfNeeded() here directly,
     // as _endTutorial() will be called if it's the end of the tutorial.
     debugPrint("[Tutorial] Skip handling finished for step $stepSkippedFrom.");
   }
 
-  void _playNextTutorialStep({required List<TutorialStepData> dataSource}) async {
-    if (!mounted || !_isTutorialActive || dataSource.isEmpty) { // Added dataSource.isEmpty check
+  void _playNextTutorialStep(
+      {required List<TutorialStepData> dataSource}) async {
+    if (!mounted || !_isTutorialActive || dataSource.isEmpty) {
+      // Added dataSource.isEmpty check
       if (_isTutorialActive && mounted) _endTutorial();
       return;
     }
-    
-    final currentStepIndexForVideoCheck = _currentTutorialStep; 
+
+    final currentStepIndexForVideoCheck = _currentTutorialStep;
     if (_tutorialVideoController != null) {
-        if (currentStepIndexForVideoCheck < dataSource.length) {
-            final nextStepData = dataSource[currentStepIndexForVideoCheck];
-            // A more robust check for "same video" might compare the full dataSource string
-            // This simplified check assumes different asset paths mean different videos.
-            bool disposeOldVideo = true;
-            if (nextStepData.mediaType == MediaType.video && 
-                _tutorialVideoController!.dataSource.contains(nextStepData.mediaAssetPath!)) { // Check if current controller is for the next step's video
-                 // Potentially, if it's the exact same video asset, you might not dispose.
-                 // For now, let's assume if it's a new step, we prefer a fresh controller unless logic is more complex.
-                 // This check is a bit loose. A direct string comparison of asset paths is better.
-                 if (_tutorialVideoController!.dataSource == VideoPlayerController.asset(nextStepData.mediaAssetPath!).dataSource) { // More direct
-                    disposeOldVideo = false; // It's the same video, don't dispose if you want to resume/seek
-                    debugPrint("[Tutorial PlayNext] Next step is same video. Not disposing controller.");
-                 }
-            }
-            if(disposeOldVideo) await _disposeTutorialVideoController();
-
-        } else {
-             await _disposeTutorialVideoController(); 
+      if (currentStepIndexForVideoCheck < dataSource.length) {
+        final nextStepData = dataSource[currentStepIndexForVideoCheck];
+        // A more robust check for "same video" might compare the full dataSource string
+        // This simplified check assumes different asset paths mean different videos.
+        bool disposeOldVideo = true;
+        if (nextStepData.mediaType == MediaType.video &&
+            _tutorialVideoController!.dataSource
+                .contains(nextStepData.mediaAssetPath!)) {
+          // Check if current controller is for the next step's video
+          // Potentially, if it's the exact same video asset, you might not dispose.
+          // For now, let's assume if it's a new step, we prefer a fresh controller unless logic is more complex.
+          // This check is a bit loose. A direct string comparison of asset paths is better.
+          if (_tutorialVideoController!.dataSource ==
+              VideoPlayerController.asset(nextStepData.mediaAssetPath!)
+                  .dataSource) {
+            // More direct
+            disposeOldVideo =
+                false; // It's the same video, don't dispose if you want to resume/seek
+            debugPrint(
+                "[Tutorial PlayNext] Next step is same video. Not disposing controller.");
+          }
         }
+        if (disposeOldVideo) await _disposeTutorialVideoController();
+      } else {
+        await _disposeTutorialVideoController();
+      }
     }
-
 
     if (_currentTutorialStep >= dataSource.length) {
       _endTutorial();
@@ -828,142 +899,166 @@ bool _isVideoBuffering = false;
     }
 
     final stepData = dataSource[_currentTutorialStep];
-    debugPrint("[Tutorial PlayNext] Playing step ${_currentTutorialStep + 1}/${dataSource.length}: \"${stepData.text.substring(0,min(stepData.text.length, 30))}...\" Media: ${stepData.mediaAssetPath ?? 'None'}");
+    debugPrint(
+        "[Tutorial PlayNext] Playing step ${_currentTutorialStep + 1}/${dataSource.length}: \"${stepData.text.substring(0, min(stepData.text.length, 30))}...\" Media: ${stepData.mediaAssetPath ?? 'None'}");
 
     if (mounted) {
       // _isTutorialSpeaking should be true if this step has text and we intend to speak it.
       // It can be set to false by video logic if text is deferred.
-      _isTutorialSpeaking = stepData.text.isNotEmpty; 
-      setState(() {}); 
+      _isTutorialSpeaking = stepData.text.isNotEmpty;
+      setState(() {});
     } else {
       return;
     }
 
+    final int stepForThisCall = _currentTutorialStep;
 
-    final int stepForThisCall = _currentTutorialStep; 
+    if (stepData.mediaAssetPath != null &&
+        stepData.mediaType == MediaType.video) {
+      if (mounted) setState(() => _isVideoBuffering = true);
 
-    if (stepData.mediaAssetPath != null && stepData.mediaType == MediaType.video) {
-      if(mounted) setState(() => _isVideoBuffering = true);
-      
       // Determine if TTS for this step should be paused while video loads/plays
       // If video has text and does not auto-advance the entire step, TTS might be deferred.
-      bool deferTTSForVideo = stepData.text.isNotEmpty && !stepData.autoAdvanceAfterMediaEnds;
+      bool deferTTSForVideo =
+          stepData.text.isNotEmpty && !stepData.autoAdvanceAfterMediaEnds;
       if (deferTTSForVideo) {
-          _isTutorialSpeaking = false; // TTS will be triggered by video listener
+        _isTutorialSpeaking = false; // TTS will be triggered by video listener
       }
 
-
-      _tutorialVideoController = VideoPlayerController.asset(stepData.mediaAssetPath!);
-      _tutorialVideoController!.addListener(_videoListener); 
-      _initializeVideoPlayerFuture = _tutorialVideoController!.initialize().then((_) {
-        if (!mounted || !_isTutorialActive || stepForThisCall != _currentTutorialStep) {
-          debugPrint("[Tutorial PlayNext] Video init: Stale step or tutorial inactive. Disposing.");
-          _disposeTutorialVideoController(); 
+      _tutorialVideoController =
+          VideoPlayerController.asset(stepData.mediaAssetPath!);
+      _tutorialVideoController!.addListener(_videoListener);
+      _initializeVideoPlayerFuture =
+          _tutorialVideoController!.initialize().then((_) {
+        if (!mounted ||
+            !_isTutorialActive ||
+            stepForThisCall != _currentTutorialStep) {
+          debugPrint(
+              "[Tutorial PlayNext] Video init: Stale step or tutorial inactive. Disposing.");
+          _disposeTutorialVideoController();
           return;
         }
-        if(mounted) setState(() => _isVideoBuffering = false);
+        if (mounted) setState(() => _isVideoBuffering = false);
         _tutorialVideoController!.play();
-        debugPrint("[Tutorial PlayNext] Video playing: ${stepData.mediaAssetPath}");
-        
+        debugPrint(
+            "[Tutorial PlayNext] Video playing: ${stepData.mediaAssetPath}");
+
         // If this video step has no text, and doesn't auto-advance, then _isTutorialSpeaking should be false
         // so the user must tap to continue after the video.
         if (stepData.text.isEmpty && !stepData.autoAdvanceAfterMediaEnds) {
-            if (mounted) setState(() => _isTutorialSpeaking = false );
+          if (mounted) setState(() => _isTutorialSpeaking = false);
         }
         // If video has text but doesn't auto-advance the step, listener handles speaking.
         // If video auto-advances the step, listener calls _handleTutorialSkip.
-
       }).catchError((error, stackTrace) {
-          debugPrint("[Tutorial PlayNext] Error initializing video '${stepData.mediaAssetPath}': $error \n$stackTrace");
-          if(mounted) setState(() => _isVideoBuffering = false);
-          if (mounted && _isTutorialActive && stepForThisCall == _currentTutorialStep) {
-            // If video fails, ensure _isTutorialSpeaking is true if there's text, then speak it.
-            _isTutorialSpeaking = stepData.text.isNotEmpty;
-            _speakTutorialStepText(stepData, stepForThisCall, dataSource);
-          }
+        debugPrint(
+            "[Tutorial PlayNext] Error initializing video '${stepData.mediaAssetPath}': $error \n$stackTrace");
+        if (mounted) setState(() => _isVideoBuffering = false);
+        if (mounted &&
+            _isTutorialActive &&
+            stepForThisCall == _currentTutorialStep) {
+          // If video fails, ensure _isTutorialSpeaking is true if there's text, then speak it.
+          _isTutorialSpeaking = stepData.text.isNotEmpty;
+          _speakTutorialStepText(stepData, stepForThisCall, dataSource);
+        }
       });
-    } else { // Image, GIF, or no media
+    } else {
+      // Image, GIF, or no media
       // _isTutorialSpeaking is already set based on stepData.text.isNotEmpty
       _speakTutorialStepText(stepData, stepForThisCall, dataSource);
     }
   }
 
- Future<void> _speakTutorialStepText(TutorialStepData stepData, int stepForThisCall, List<TutorialStepData> dataSource) async {
-      if (!mounted || !_isTutorialActive || !_isTutorialSpeaking || stepForThisCall != _currentTutorialStep) {
-        // If conditions are not met (e.g. tutorial was ended, or this isn't the current step anymore) then abort.
-        // Also, if _isTutorialSpeaking became false (e.g. user tapped skip while text was meant to play), abort speaking.
-        debugPrint("[Tutorial Speak] Aborted speak for step $stepForThisCall. Mounted: $mounted, Active: $_isTutorialActive, SpeakingFlag: $_isTutorialSpeaking, StepMatch: ${stepForThisCall == _currentTutorialStep}");
-        return;
+  Future<void> _speakTutorialStepText(TutorialStepData stepData,
+      int stepForThisCall, List<TutorialStepData> dataSource) async {
+    if (!mounted ||
+        !_isTutorialActive ||
+        !_isTutorialSpeaking ||
+        stepForThisCall != _currentTutorialStep) {
+      // If conditions are not met (e.g. tutorial was ended, or this isn't the current step anymore) then abort.
+      // Also, if _isTutorialSpeaking became false (e.g. user tapped skip while text was meant to play), abort speaking.
+      debugPrint(
+          "[Tutorial Speak] Aborted speak for step $stepForThisCall. Mounted: $mounted, Active: $_isTutorialActive, SpeakingFlag: $_isTutorialSpeaking, StepMatch: ${stepForThisCall == _currentTutorialStep}");
+      return;
+    }
+
+    await _ttsService.speak(stepData.text);
+
+    // After speaking, or if there was no text to speak for this step
+    if (mounted &&
+        _isTutorialActive &&
+        _isTutorialSpeaking &&
+        stepForThisCall == _currentTutorialStep) {
+      // If it's not a video that's currently playing and waiting for completion to advance
+      bool shouldAutoAdvanceAfterSpeech = true;
+      if (stepData.mediaType == MediaType.video &&
+          _tutorialVideoController != null &&
+          _tutorialVideoController!.value.isInitialized &&
+          _tutorialVideoController!.value.isPlaying) {
+        if (!stepData.autoAdvanceAfterMediaEnds) {
+          shouldAutoAdvanceAfterSpeech =
+              false; // Video is playing, user will tap to advance or video listener handles it.
+        }
       }
 
-      await _ttsService.speak(stepData.text);
-
-      // After speaking, or if there was no text to speak for this step
-      if (mounted && _isTutorialActive && _isTutorialSpeaking && stepForThisCall == _currentTutorialStep) {
-          // If it's not a video that's currently playing and waiting for completion to advance
-          bool shouldAutoAdvanceAfterSpeech = true;
-          if (stepData.mediaType == MediaType.video && _tutorialVideoController != null && _tutorialVideoController!.value.isInitialized && _tutorialVideoController!.value.isPlaying) {
-              if (!stepData.autoAdvanceAfterMediaEnds) {
-                  shouldAutoAdvanceAfterSpeech = false; // Video is playing, user will tap to advance or video listener handles it.
-              }
-          }
-          
-          // This condition was added to handle text after a non-auto-advancing video.
-          // If the video auto-advances the *entire step*, its listener calls _handleTutorialSkip.
-          if(stepData.mediaType == MediaType.video && stepData.autoAdvanceAfterMediaEnds && _tutorialVideoController != null && _tutorialVideoController!.value.isInitialized && !_tutorialVideoController!.value.isPlaying){
-            // This case means: it's a video step, it auto advances the step, and the video has finished playing.
-            // The listener should have already called _handleTutorialSkip. So, don't advance here.
-            shouldAutoAdvanceAfterSpeech = false;
-            debugPrint("[Tutorial Speak] Text for auto-advancing video step $stepForThisCall spoken. Listener handles step advancement.");
-          }
-
-
-          if(shouldAutoAdvanceAfterSpeech){
-            debugPrint("[Tutorial Speak] Auto-advancing after speech/no-media for step $stepForThisCall");
-            _currentTutorialStep++;
-            _playNextTutorialStep(dataSource: dataSource);
-          } else {
-            debugPrint("[Tutorial Speak] Not auto-advancing for step $stepForThisCall (e.g. video playing or non-auto-advancing video finished text)");
-          }
-      } else if (mounted && _isTutorialActive && !_isTutorialSpeaking && stepForThisCall == _currentTutorialStep) {
-          // This case: speaking flag was turned off (e.g., by manual skip) during awaited speak.
-          debugPrint("[Tutorial Speak] Speaking flag became false during/after speak for step $stepForThisCall. No auto-advance.");
+      // This condition was added to handle text after a non-auto-advancing video.
+      // If the video auto-advances the *entire step*, its listener calls _handleTutorialSkip.
+      if (stepData.mediaType == MediaType.video &&
+          stepData.autoAdvanceAfterMediaEnds &&
+          _tutorialVideoController != null &&
+          _tutorialVideoController!.value.isInitialized &&
+          !_tutorialVideoController!.value.isPlaying) {
+        // This case means: it's a video step, it auto advances the step, and the video has finished playing.
+        // The listener should have already called _handleTutorialSkip. So, don't advance here.
+        shouldAutoAdvanceAfterSpeech = false;
+        debugPrint(
+            "[Tutorial Speak] Text for auto-advancing video step $stepForThisCall spoken. Listener handles step advancement.");
       }
+
+      if (shouldAutoAdvanceAfterSpeech) {
+        debugPrint(
+            "[Tutorial Speak] Auto-advancing after speech/no-media for step $stepForThisCall");
+        _currentTutorialStep++;
+        _playNextTutorialStep(dataSource: dataSource);
+      } else {
+        debugPrint(
+            "[Tutorial Speak] Not auto-advancing for step $stepForThisCall (e.g. video playing or non-auto-advancing video finished text)");
+      }
+    } else if (mounted &&
+        _isTutorialActive &&
+        !_isTutorialSpeaking &&
+        stepForThisCall == _currentTutorialStep) {
+      // This case: speaking flag was turned off (e.g., by manual skip) during awaited speak.
+      debugPrint(
+          "[Tutorial Speak] Speaking flag became false during/after speak for step $stepForThisCall. No auto-advance.");
+    }
   }
 
   void _endTutorial() async {
     if (!mounted) return;
-    debugPrint("[Tutorial] Ending tutorial. Was active: $_isTutorialActive, Current step: $_currentTutorialStep");
-    
-    await _disposeTutorialVideoController(); 
+    debugPrint(
+        "[Tutorial] Ending tutorial. Was active: $_isTutorialActive, Current step: $_currentTutorialStep");
 
-    if (_isTutorialSpeaking || _ttsService.isPlaying) { 
-      await _ttsService.stop(); 
+    await _disposeTutorialVideoController();
+
+    if (_isTutorialSpeaking || _ttsService.isPlaying) {
+      await _ttsService.stop();
     }
-  if (mounted) {
-    setState(() {
-      _isTutorialActive = false;
-      _currentTutorialStep = 0;
-      _isTutorialSpeaking = false;
-      _currentFeatureHelpSteps = []; 
-    });
+    if (mounted) {
+      setState(() {
+        _isTutorialActive = false;
+        _currentTutorialStep = 0;
+        _isTutorialSpeaking = false;
+        _currentFeatureHelpSteps = [];
+      });
+    }
+
+    debugPrint(
+        "[Tutorial] Tutorial ended. Attempting to restart detection timer if needed.");
+    _startDetectionTimerIfNeeded(); // <<< THIS IS ALREADY HERE
   }
-  
-  debugPrint("[Tutorial] Tutorial ended. Attempting to restart detection timer if needed.");
-  _startDetectionTimerIfNeeded(); // <<< THIS IS ALREADY HERE
-}
 // --- End Tutorial Logic ---
 
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
   // --- Lifecycle Event Handlers -----------------------------------------------------------------------------------
   void _handleAppPause() {
     debugPrint("[Lifecycle] App inactive/paused - Cleaning up...");
@@ -1011,20 +1106,6 @@ bool _isVideoBuffering = false;
       _startDetectionTimerIfNeeded();
     }
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   // --- Camera Management ---
   Future<void> _disposeMainCameraController() async {
@@ -1175,17 +1256,6 @@ bool _isVideoBuffering = false;
     }
   }
 
-
-
-
-
-
-
-
-
-
-
-
 // --- WebSocket Handling ---
   void _initializeWebSocket() {
     debugPrint("[HomeScreen] Initializing WebSocket listener...");
@@ -1263,10 +1333,11 @@ bool _isVideoBuffering = false;
                   .map((e) => e.trim())
                   .toList()
               : [];
-          String hazardNameFromOD = _processHazardDetection(detectedObjectsList); 
+          String hazardNameFromOD =
+              _processHazardDetection(detectedObjectsList);
           if (hazardNameFromOD.isNotEmpty) {
-            _supervisionHazardName = hazardNameFromOD; 
-            _supervisionIsHazardActive = _isHazardAlertActive; 
+            _supervisionHazardName = hazardNameFromOD;
+            _supervisionIsHazardActive = _isHazardAlertActive;
           }
         } else if (actualFeatureIdFromSupervision ==
             hazardDetectionFeature.id) {
@@ -1279,14 +1350,14 @@ bool _isVideoBuffering = false;
                   .map((e) => e.trim())
                   .toList()
               : [];
-          String hazardName = _processHazardDetection(detectedObjectsList); 
+          String hazardName = _processHazardDetection(detectedObjectsList);
           _supervisionHazardName = hazardName;
           _supervisionIsHazardActive = _isHazardAlertActive;
           _supervisionDisplayResult = hazardName.isNotEmpty
               ? hazardName.replaceAll('_', ' ')
               : "No direct hazards detected by SuperVision.";
           textToSpeak = hazardName.isNotEmpty
-              ? "" 
+              ? ""
               : "Hazard scan complete. No critical hazards identified by SuperVision.";
         } else if (actualFeatureIdFromSupervision == sceneDetectionFeature.id) {
           final sceneResult = _processSupervisionSceneResult(resultTextRaw);
@@ -1301,9 +1372,10 @@ bool _isVideoBuffering = false;
               ? textResult['speakText']
               : "Text analysis complete.";
         } else if (actualFeatureIdFromSupervision ==
-            currencyDetectionFeature.id) { // Updated for currency
-          final currencyResult =
-              _processSupervisionCurrencyResult(resultTextRaw); // This function expects a string resultTextRaw
+            currencyDetectionFeature.id) {
+          // Updated for currency
+          final currencyResult = _processSupervisionCurrencyResult(
+              resultTextRaw); // This function expects a string resultTextRaw
           _supervisionDisplayResult = currencyResult['display'];
           textToSpeak = currencyResult['speak']
               ? currencyResult['speakText']
@@ -1349,7 +1421,7 @@ bool _isVideoBuffering = false;
               _ttsService.speak(nonHazardPart);
           }
         }
-        _isProcessingImage = false; 
+        _isProcessingImage = false;
         _lastRequestedFeatureId = null;
       });
     } else if (data.containsKey('result') &&
@@ -1359,7 +1431,7 @@ bool _isVideoBuffering = false;
       final String? receivedForFeatureId = _lastRequestedFeatureId;
 
       _processFeatureResult(receivedForFeatureId, status, resultData);
-      _isProcessingImage = false; 
+      _isProcessingImage = false;
       _lastRequestedFeatureId = null;
     } else {
       debugPrint('[HomeScreen] Received unexpected WS data format: $data');
@@ -1399,7 +1471,8 @@ bool _isVideoBuffering = false;
           final String detectedName =
               (detection?['name'] as String?)?.toLowerCase() ?? "null";
           final String targetName = _focusedObject?.toLowerCase() ?? "null";
-          debugPrint("[Focus] Received detection: '$detectedName'. Target: '$targetName'. Status: '$status'");
+          debugPrint(
+              "[Focus] Received detection: '$detectedName'. Target: '$targetName'. Status: '$status'");
           if (detection != null && detectedName == targetName) {
             final double centerX = detection['center_x'] as double? ?? 0.5;
             final double centerY = detection['center_y'] as double? ?? 0.5;
@@ -1407,32 +1480,35 @@ bool _isVideoBuffering = false;
             final double dy = centerY - 0.5;
             final double dist = sqrt(dx * dx + dy * dy);
             _currentProximity = (1.0 - (dist / 0.707)).clamp(0.0, 1.0);
-            debugPrint("[Focus] Target '$targetName' found. Prox: ${_currentProximity.toStringAsFixed(3)}");
+            debugPrint(
+                "[Focus] Target '$targetName' found. Prox: ${_currentProximity.toStringAsFixed(3)}");
             _isFocusObjectDetectedInFrame = true;
             _isFocusObjectCentered = dist < _focusCenterThreshold;
 
             if (_isFocusObjectCentered && !_announcedFocusFound) {
-              if (_ttsInitialized) _ttsService.speak("${_focusedObject ?? 'Object'} found!");
+              if (_ttsInitialized)
+                _ttsService.speak("${_focusedObject ?? 'Object'} found!");
               _announcedFocusFound = true;
               Future.delayed(_focusFoundAnnounceCooldown, () {
                 if (mounted) _announcedFocusFound = false;
               });
             }
           } else {
-            debugPrint("[Focus] Detected '$detectedName' != target '$targetName'. Resetting.");
+            debugPrint(
+                "[Focus] Detected '$detectedName' != target '$targetName'. Resetting.");
             _currentProximity = 0.0;
             _isFocusObjectDetectedInFrame = false;
             _isFocusObjectCentered = false;
           }
         } else {
-          debugPrint("[Focus] Target '$_focusedObject' not found or error. Status '$status'. Resetting.");
+          debugPrint(
+              "[Focus] Target '$_focusedObject' not found or error. Status '$status'. Resetting.");
           _currentProximity = 0.0;
           _isFocusObjectDetectedInFrame = false;
           _isFocusObjectCentered = false;
         }
         _updateFocusFeedback();
-      }
-      else {
+      } else {
         bool speakResult = false;
         String textToSpeak = "";
         String displayResult = "";
@@ -1440,12 +1516,15 @@ bool _isVideoBuffering = false;
         if (featureId == objectDetectionFeature.id) {
           if (status == 'ok') {
             List<String> names = (resultData['detections'] as List<dynamic>?)
-                    ?.map((d) => (d as Map<String, dynamic>)['name'] as String? ?? '')
+                    ?.map((d) =>
+                        (d as Map<String, dynamic>)['name'] as String? ?? '')
                     .where((name) => name.isNotEmpty)
                     .toList() ??
                 [];
             List<String> filteredNames = _filterObjectsByCategory(names);
-            displayResult = filteredNames.isNotEmpty ? filteredNames.join(', ') : "No objects in category";
+            displayResult = filteredNames.isNotEmpty
+                ? filteredNames.join(', ')
+                : "No objects in category";
             speakResult = filteredNames.isNotEmpty;
             textToSpeak = displayResult;
           } else if (status == 'none') {
@@ -1456,7 +1535,8 @@ bool _isVideoBuffering = false;
           _lastObjectResult = displayResult;
         } else if (featureId == sceneDetectionFeature.id) {
           if (status == 'ok') {
-            displayResult = (resultData['scene'] as String? ?? "Unknown Scene").replaceAll('_', ' ');
+            displayResult = (resultData['scene'] as String? ?? "Unknown Scene")
+                .replaceAll('_', ' ');
             speakResult = true;
             textToSpeak = "Scene: $displayResult";
           } else {
@@ -1474,66 +1554,92 @@ bool _isVideoBuffering = false;
             displayResult = resultData['message'] ?? "Text Error";
           }
           _lastSceneTextResult = displayResult;
-        } else if (featureId == currencyDetectionFeature.id) { // Updated for currency
+        } else if (featureId == currencyDetectionFeature.id) {
+          // Updated for currency
           if (status == 'ok') {
             // Backend sends 'currency' (name) and 'confidence'
-            final String currencyName = resultData['currency'] as String? ?? "Unknown Currency";
+            final String currencyName =
+                resultData['currency'] as String? ?? "Unknown Currency";
             // final double confidence = (resultData['confidence'] as num?)?.toDouble() ?? 0.0;
             // For now, just display the name as per current CurrencyDetectionPage
-            displayResult = currencyName; 
+            displayResult = currencyName;
             speakResult = true;
             textToSpeak = "Currency detected: $displayResult";
           } else if (status == 'none') {
-            displayResult = resultData['message'] ?? "No currency detected"; // Use message if available
-          } else { // error
+            displayResult = resultData['message'] ??
+                "No currency detected"; // Use message if available
+          } else {
+            // error
             displayResult = resultData['message'] ?? "Currency Error";
           }
           _lastCurrencyResult = displayResult;
         }
 
-        if (speakResult && _ttsInitialized && featureId != hazardDetectionFeature.id) {
+        if (speakResult &&
+            _ttsInitialized &&
+            featureId != hazardDetectionFeature.id) {
           _ttsService.speak(textToSpeak);
         }
       }
     });
   }
 
-  Map<String, dynamic> _processSupervisionObjectDetectionResult(String rawDetections) {
+  Map<String, dynamic> _processSupervisionObjectDetectionResult(
+      String rawDetections) {
     String displayResult;
     bool speakResult = false;
     String textToSpeak = "";
 
-    if (rawDetections.isNotEmpty && rawDetections != "No objects detected" && !rawDetections.startsWith("Error")) {
-      List<String> allDetected = rawDetections.split(',').map((e) => e.trim()).toList();
-      List<String> filteredObjects = _filterObjectsByCategory(allDetected); 
+    if (rawDetections.isNotEmpty &&
+        rawDetections != "No objects detected" &&
+        !rawDetections.startsWith("Error")) {
+      List<String> allDetected =
+          rawDetections.split(',').map((e) => e.trim()).toList();
+      List<String> filteredObjects = _filterObjectsByCategory(allDetected);
 
       if (filteredObjects.isNotEmpty) {
         displayResult = filteredObjects.join(', ');
         speakResult = true;
         textToSpeak = displayResult;
       } else {
-        displayResult = "No objects found in category: ${objectDetectionCategories[_selectedObjectCategory] ?? _selectedObjectCategory}";
-        speakResult = false; 
+        displayResult =
+            "No objects found in category: ${objectDetectionCategories[_selectedObjectCategory] ?? _selectedObjectCategory}";
+        speakResult = false;
       }
     } else {
-      displayResult = rawDetections; 
+      displayResult = rawDetections;
       speakResult = false;
     }
-    return {'display': displayResult, 'speak': speakResult, 'speakText': textToSpeak};
+    return {
+      'display': displayResult,
+      'speak': speakResult,
+      'speakText': textToSpeak
+    };
   }
 
   Map<String, dynamic> _processSupervisionSceneResult(String resultTextRaw) {
     String displayResult = resultTextRaw.replaceAll('_', ' ');
-    bool speakResult = displayResult.isNotEmpty && !displayResult.startsWith("Error");
+    bool speakResult =
+        displayResult.isNotEmpty && !displayResult.startsWith("Error");
     String textToSpeak = speakResult ? "Scene: $displayResult" : "";
-    return {'display': displayResult, 'speak': speakResult, 'speakText': textToSpeak};
+    return {
+      'display': displayResult,
+      'speak': speakResult,
+      'speakText': textToSpeak
+    };
   }
 
   Map<String, dynamic> _processSupervisionTextResult(String resultTextRaw) {
     String displayResult = resultTextRaw;
-    bool speakResult = displayResult.isNotEmpty && displayResult != "No text detected" && !displayResult.startsWith("Error");
+    bool speakResult = displayResult.isNotEmpty &&
+        displayResult != "No text detected" &&
+        !displayResult.startsWith("Error");
     String textToSpeak = speakResult ? "Text detected: $displayResult" : "";
-    return {'display': displayResult, 'speak': speakResult, 'speakText': textToSpeak};
+    return {
+      'display': displayResult,
+      'speak': speakResult,
+      'speakText': textToSpeak
+    };
   }
 
   List<String> _filterObjectsByCategory(List<String> objectNames) {
@@ -1558,26 +1664,37 @@ bool _isVideoBuffering = false;
     }
 
     if (hazardFoundInFrame) {
-      _triggerHazardAlert(specificHazardFound); 
+      _triggerHazardAlert(specificHazardFound);
     }
-    return specificHazardFound; 
+    return specificHazardFound;
   }
 
   Map<String, dynamic> _processSupervisionCurrencyResult(String resultTextRaw) {
     // This function expects the raw string result from the backend's SuperVision currency processing
-    String displayResult = resultTextRaw.replaceAll('_', ' '); // Basic formatting if needed
-    bool speakResult = displayResult.isNotEmpty && 
-                       !displayResult.toLowerCase().startsWith("error") && 
-                       displayResult.toLowerCase() != "no currency detected by supervision"; // Check for common non-results
-    String textToSpeak = speakResult ? "Currency detected: $displayResult" : (displayResult.toLowerCase().startsWith("error") ? displayResult : ""); // Speak error or actual result
-    
+    String displayResult =
+        resultTextRaw.replaceAll('_', ' '); // Basic formatting if needed
+    bool speakResult = displayResult.isNotEmpty &&
+        !displayResult.toLowerCase().startsWith("error") &&
+        displayResult.toLowerCase() !=
+            "no currency detected by supervision"; // Check for common non-results
+    String textToSpeak = speakResult
+        ? "Currency detected: $displayResult"
+        : (displayResult.toLowerCase().startsWith("error")
+            ? displayResult
+            : ""); // Speak error or actual result
+
     // If "No currency detected by SuperVision", don't speak it unless you want to.
     // For this implementation, we will only speak actual detections or errors.
     if (displayResult.toLowerCase() == "no currency detected by supervision") {
-        textToSpeak = ""; // Don't speak "No currency detected" for supervision, keep it visual
+      textToSpeak =
+          ""; // Don't speak "No currency detected" for supervision, keep it visual
     }
 
-    return {'display': displayResult, 'speak': speakResult, 'speakText': textToSpeak};
+    return {
+      'display': displayResult,
+      'speak': speakResult,
+      'speakText': textToSpeak
+    };
   }
 
   void _handleWebSocketError(error) {
@@ -1628,19 +1745,11 @@ bool _isVideoBuffering = false;
         _supervisionHazardName = "";
         _supervisionIsHazardActive = false;
       });
-      _showStatusMessage('Disconnected. Trying to reconnect...', isError: true, durationSeconds: 5);
+      _showStatusMessage('Disconnected. Trying to reconnect...',
+          isError: true, durationSeconds: 5);
     }
   }
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
+
   // --- Speech Recognition Handling ---
   Future<void> _initSpeech() async {
     try {
@@ -1900,16 +2009,6 @@ bool _isVideoBuffering = false;
     }
   }
 
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
   // --- Detection Logic ---
   void _startDetectionTimerIfNeeded() {
     if (!mounted || _features.isEmpty) return;
@@ -2159,16 +2258,6 @@ bool _isVideoBuffering = false;
     }
   }
 
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
   // --- Alerting (Hazard & Focus) ---
   void _triggerHazardAlert(String hazardName) {
     debugPrint("[ALERT] Hazard Triggering for: $hazardName");
@@ -2279,16 +2368,6 @@ bool _isVideoBuffering = false;
     }
   }
 
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
   // --- Navigation & UI Helpers ---
   void _showStatusMessage(String message,
       {bool isError = false, int durationSeconds = 3}) {
@@ -2336,50 +2415,54 @@ bool _isVideoBuffering = false;
     }
   }
 
- // In _navigateToSettingsPage()
-Future<void> _navigateToSettingsPage() async {
-  if (!mounted) return;
-  debugPrint("Navigating to Settings...");
-  if (_speechToText.isListening) await _stopListening();
-  if (_ttsInitialized) _ttsService.stop();
-  _stopDetectionTimer();
-  _stopFocusFeedback();
-  final currentFeatureId = _features.isNotEmpty
-      ? _features[_currentPage.clamp(0, _features.length - 1)].id
-      : null;
-  bool isMainCameraPage = currentFeatureId != barcodeScannerFeature.id;
-  if (isMainCameraPage) await _disposeMainCameraController();
-  
-  await Navigator.push(
-    context,
-    MaterialPageRoute(builder: (context) => const SettingsScreen()),
-  );
-  
-  if (!mounted) return;
-  debugPrint("Returned from Settings.");
-  
-  // Reload OCR language and TTS V,P,R settings
-  await _loadAndInitializeSettings(); 
+  // In _navigateToSettingsPage()
+  Future<void> _navigateToSettingsPage() async {
+    if (!mounted) return;
+    debugPrint("Navigating to Settings...");
+    if (_speechToText.isListening) await _stopListening();
+    if (_ttsInitialized) _ttsService.stop();
+    _stopDetectionTimer();
+    _stopFocusFeedback();
+    final currentFeatureId = _features.isNotEmpty
+        ? _features[_currentPage.clamp(0, _features.length - 1)].id
+        : null;
+    bool isMainCameraPage = currentFeatureId != barcodeScannerFeature.id;
+    if (isMainCameraPage) await _disposeMainCameraController();
 
-  // --- NEW: Adjust TTS language based on current page and new settings ---
-  if (_features[_currentPage].id == textDetectionFeature.id) {
-    final String ocrLang = _selectedOcrLanguage;
-    String? targetTtsLang = ocrToTtsLanguageMap[ocrLang];
-    debugPrint("[TTS Lang] Settings Return (On Text Rec): OCR lang '$ocrLang', mapped TTS lang '$targetTtsLang'. Global: '$_globalTtsLanguageSetting'");
-    await _ttsService.setSpeechLanguage(targetTtsLang ?? _globalTtsLanguageSetting);
-  } else {
-    // If not on text rec page, ensure TTS is set to global default
-    debugPrint("[TTS Lang] Settings Return (Not On Text Rec). Ensuring TTS is global: '$_globalTtsLanguageSetting'");
-    await _ttsService.setSpeechLanguage(_globalTtsLanguageSetting);
-  }
-  // --- END NEW ---
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const SettingsScreen()),
+    );
 
-  bool isFocusModeWaitingForObject = _isFocusModeActive && _focusedObject == null;
-  if (isMainCameraPage && !isFocusModeWaitingForObject) {
-    await _initializeMainCameraController();
+    if (!mounted) return;
+    debugPrint("Returned from Settings.");
+
+    // Reload OCR language and TTS V,P,R settings
+    await _loadAndInitializeSettings();
+
+    // --- NEW: Adjust TTS language based on current page and new settings ---
+    if (_features[_currentPage].id == textDetectionFeature.id) {
+      final String ocrLang = _selectedOcrLanguage;
+      String? targetTtsLang = ocrToTtsLanguageMap[ocrLang];
+      debugPrint(
+          "[TTS Lang] Settings Return (On Text Rec): OCR lang '$ocrLang', mapped TTS lang '$targetTtsLang'. Global: '$_globalTtsLanguageSetting'");
+      await _ttsService
+          .setSpeechLanguage(targetTtsLang ?? _globalTtsLanguageSetting);
+    } else {
+      // If not on text rec page, ensure TTS is set to global default
+      debugPrint(
+          "[TTS Lang] Settings Return (Not On Text Rec). Ensuring TTS is global: '$_globalTtsLanguageSetting'");
+      await _ttsService.setSpeechLanguage(_globalTtsLanguageSetting);
+    }
+    // --- END NEW ---
+
+    bool isFocusModeWaitingForObject =
+        _isFocusModeActive && _focusedObject == null;
+    if (isMainCameraPage && !isFocusModeWaitingForObject) {
+      await _initializeMainCameraController();
+    }
+    _startDetectionTimerIfNeeded();
   }
-  _startDetectionTimerIfNeeded();
-}
 
   void _showPermissionInstructions() {
     if (!mounted) return;
@@ -2420,55 +2503,51 @@ Future<void> _navigateToSettingsPage() async {
     }
   }
 
-  
-  
-  
-  
-  
-  
-  
-  
-  
   // --- Page Change Handler ---
   void _onPageChanged(int index) async {
     if (!mounted) return;
     final newPageIndex = index.clamp(0, _features.length - 1);
     // Ensure newPageIndex is valid (already clamped, but good for clarity if features list could be empty during an edge case)
     if (newPageIndex >= _features.length) {
-         debugPrint("[Navigation Error] newPageIndex $newPageIndex is out of bounds for features list length ${_features.length}.");
-        return; 
+      debugPrint(
+          "[Navigation Error] newPageIndex $newPageIndex is out of bounds for features list length ${_features.length}.");
+      return;
     }
 
     final int previousPageIndex = _currentPage;
-    
+
     // Prevent redundant calls if the index hasn't actually changed
     if (previousPageIndex == newPageIndex) {
-      debugPrint("[Navigation] Attempted to navigate to the same page ($newPageIndex). Skipping _onPageChanged logic.");
+      debugPrint(
+          "[Navigation] Attempted to navigate to the same page ($newPageIndex). Skipping _onPageChanged logic.");
       return;
     }
 
     // Validate previousPageIndex before using it to access _features list
     if (previousPageIndex < 0 || previousPageIndex >= _features.length) {
-      debugPrint("[Navigation Error] Invalid previousPageIndex: $previousPageIndex. Current new is $newPageIndex.");
+      debugPrint(
+          "[Navigation Error] Invalid previousPageIndex: $previousPageIndex. Current new is $newPageIndex.");
       // Attempt to recover by setting current page and letting UI rebuild.
       // Avoids crashing on _features[previousPageIndex]
-      _currentPage = newPageIndex; 
+      _currentPage = newPageIndex;
       if (mounted) setState(() {});
       // It might be better to speak the new feature title here if recovery is simple.
       // For now, just recover state and return.
-      return; 
+      return;
     }
 
     if (_isTutorialActive) {
-      debugPrint("[Tutorial] Page changed during active tutorial. Ending tutorial.");
-      await _ttsService.stop(); 
-      _isTutorialSpeaking = false; 
-      _endTutorial(); 
+      debugPrint(
+          "[Tutorial] Page changed during active tutorial. Ending tutorial.");
+      await _ttsService.stop();
+      _isTutorialSpeaking = false;
+      _endTutorial();
     }
 
     final previousFeature = _features[previousPageIndex];
     final newFeature = _features[newPageIndex];
-    debugPrint("[Navigation] Page changed from ${previousFeature.id} (idx $previousPageIndex) to ${newFeature.id} (idx $newPageIndex)");
+    debugPrint(
+        "[Navigation] Page changed from ${previousFeature.id} (idx $previousPageIndex) to ${newFeature.id} (idx $newPageIndex)");
 
     // Stop ongoing activities FIRST
     if (_ttsInitialized) _ttsService.stop();
@@ -2477,23 +2556,29 @@ Future<void> _navigateToSettingsPage() async {
     if (previousFeature.id == hazardDetectionFeature.id) _clearHazardAlert();
 
     // --- TTS Language Management on Page Change ---
-    if (_ttsInitialized) { // Ensure TTS service is ready
+    if (_ttsInitialized) {
+      // Ensure TTS service is ready
       if (newFeature.id == textDetectionFeature.id) {
-        final String ocrLang = _selectedOcrLanguage; 
+        final String ocrLang = _selectedOcrLanguage;
         String? targetTtsLang = ocrToTtsLanguageMap[ocrLang];
-        debugPrint("[TTS Lang] Navigating TO Text Rec Page: OCR lang '$ocrLang', mapped TTS lang '$targetTtsLang'. Global TTS: '$_globalTtsLanguageSetting'");
-        await _ttsService.setSpeechLanguage(targetTtsLang ?? _globalTtsLanguageSetting);
+        debugPrint(
+            "[TTS Lang] Navigating TO Text Rec Page: OCR lang '$ocrLang', mapped TTS lang '$targetTtsLang'. Global TTS: '$_globalTtsLanguageSetting'");
+        await _ttsService
+            .setSpeechLanguage(targetTtsLang ?? _globalTtsLanguageSetting);
       }
       // When navigating FROM Text Recognition page to a DIFFERENT page
-      else if (previousFeature.id == textDetectionFeature.id && newFeature.id != textDetectionFeature.id) {
-        debugPrint("[TTS Lang] Navigating FROM Text Rec Page. Reverting TTS to global: '$_globalTtsLanguageSetting'");
+      else if (previousFeature.id == textDetectionFeature.id &&
+          newFeature.id != textDetectionFeature.id) {
+        debugPrint(
+            "[TTS Lang] Navigating FROM Text Rec Page. Reverting TTS to global: '$_globalTtsLanguageSetting'");
         await _ttsService.setSpeechLanguage(_globalTtsLanguageSetting);
       }
       // If navigating between non-text pages, or from a non-text page to another non-text page,
       // ensure the global TTS language is active. This also handles the first page load if it's not Text Rec.
       else if (newFeature.id != textDetectionFeature.id) {
-         debugPrint("[TTS Lang] Navigating to/between NON-Text Rec pages. Ensuring global TTS: '$_globalTtsLanguageSetting'");
-         await _ttsService.setSpeechLanguage(_globalTtsLanguageSetting);
+        debugPrint(
+            "[TTS Lang] Navigating to/between NON-Text Rec pages. Ensuring global TTS: '$_globalTtsLanguageSetting'");
+        await _ttsService.setSpeechLanguage(_globalTtsLanguageSetting);
       }
     }
     // --- END TTS Language Management ---
@@ -2502,54 +2587,72 @@ Future<void> _navigateToSettingsPage() async {
     _isFocusModeActive = newFeature.id == focusModeFeature.id;
 
     _currentPage = newPageIndex; // Update current page state
-    if (mounted) setState(() {}); else return; // Rebuild UI with new page context
+    if (mounted)
+      setState(() {});
+    else
+      return; // Rebuild UI with new page context
 
     // --- Camera Transitions ---
     bool isSwitchingToBarcode = newFeature.id == barcodeScannerFeature.id;
-    bool isSwitchingToFocusInitial = _isFocusModeActive && _focusedObject == null && newFeature.id == focusModeFeature.id;
-    bool isSwitchingFromBarcode = previousFeature.id == barcodeScannerFeature.id;
+    bool isSwitchingToFocusInitial = _isFocusModeActive &&
+        _focusedObject == null &&
+        newFeature.id == focusModeFeature.id;
+    bool isSwitchingFromBarcode =
+        previousFeature.id == barcodeScannerFeature.id;
     bool isSwitchingFromFocus = wasFocusMode && !_isFocusModeActive;
 
-    debugPrint("[Nav] CamLogic: ToBarcode=$isSwitchingToBarcode, ToFocusInitial=$isSwitchingToFocusInitial, FromBarcode=$isSwitchingFromBarcode, FromFocus=$isSwitchingFromFocus");
+    debugPrint(
+        "[Nav] CamLogic: ToBarcode=$isSwitchingToBarcode, ToFocusInitial=$isSwitchingToFocusInitial, FromBarcode=$isSwitchingFromBarcode, FromFocus=$isSwitchingFromFocus");
 
     if (isSwitchingToFocusInitial) {
       if (_cameraController != null || _isMainCameraInitializing) {
-        debugPrint("[Nav] Switching TO initial focus - Speaking TTS then disposing main camera...");
+        debugPrint(
+            "[Nav] Switching TO initial focus - Speaking TTS then disposing main camera...");
         // TTS for focus prompt uses current language (which would be global or OCR lang if coming from TextRec)
-        if (_ttsInitialized) await _ttsService.speak("Metal Detector. Tap the button, then say the object name.");
-        await _disposeMainCameraController(); 
+        if (_ttsInitialized)
+          await _ttsService.speak(
+              "Metal Detector. Tap the button, then say the object name.");
+        await _disposeMainCameraController();
         debugPrint("[Nav] Main camera disposed after TTS for focus.");
       } else {
-        if (_ttsInitialized) await _ttsService.speak("Metal Detector. Tap the button, then say the object name.");
+        if (_ttsInitialized)
+          await _ttsService.speak(
+              "Metal Detector. Tap the button, then say the object name.");
       }
-    }
-    else if (isSwitchingToBarcode) {
+    } else if (isSwitchingToBarcode) {
       if (_cameraController != null || _isMainCameraInitializing) {
-        debugPrint("[Nav] Switching TO barcode - disposing main camera (async)...");
+        debugPrint(
+            "[Nav] Switching TO barcode - disposing main camera (async)...");
         _disposeMainCameraController(); // Dispose without awaiting
       }
-    }
-    else if (isSwitchingFromBarcode || isSwitchingFromFocus) {
-      bool newPageNeedsCamera = newFeature.id != barcodeScannerFeature.id && !isSwitchingToFocusInitial; 
+    } else if (isSwitchingFromBarcode || isSwitchingFromFocus) {
+      bool newPageNeedsCamera = newFeature.id != barcodeScannerFeature.id &&
+          !isSwitchingToFocusInitial;
       if (newPageNeedsCamera) {
-        debugPrint("[Nav] Switching FROM barcode/focus TO page needing camera (${newFeature.id}) - Ensuring camera init...");
-        await Future.delayed(const Duration(milliseconds: 200)); // Short delay before re-init
-        _initializeMainCameraController(); 
-         // _initializeMainCameraController(); // Second call if you find it necessary
-        if (mounted) setState(() {}); 
-        debugPrint("[Nav] Camera initialization for ${newFeature.id} complete/triggered.");
+        debugPrint(
+            "[Nav] Switching FROM barcode/focus TO page needing camera (${newFeature.id}) - Ensuring camera init...");
+        await Future.delayed(
+            const Duration(milliseconds: 200)); // Short delay before re-init
+        _initializeMainCameraController();
+        // _initializeMainCameraController(); // Second call if you find it necessary
+        if (mounted) setState(() {});
+        debugPrint(
+            "[Nav] Camera initialization for ${newFeature.id} complete/triggered.");
       }
-    }
-    else { // Transitions between other pages that might need camera
-      bool newPageNeedsCamera = newFeature.id != barcodeScannerFeature.id && !isSwitchingToFocusInitial;
+    } else {
+      // Transitions between other pages that might need camera
+      bool newPageNeedsCamera = newFeature.id != barcodeScannerFeature.id &&
+          !isSwitchingToFocusInitial;
       // If new page needs camera AND (it's null OR not initialized) AND not currently initializing
-      if (newPageNeedsCamera && 
-          (_cameraController == null || !_cameraController!.value.isInitialized) && 
+      if (newPageNeedsCamera &&
+          (_cameraController == null ||
+              !_cameraController!.value.isInitialized) &&
           !_isMainCameraInitializing) {
-        debugPrint("[Nav] Other transition: Page ${newFeature.id} needs camera, ensuring it's initialized.");
-        _initializeMainCameraController(); 
-       _initializeMainCameraController(); // Second call if needed
-        if (mounted) setState(() {}); 
+        debugPrint(
+            "[Nav] Other transition: Page ${newFeature.id} needs camera, ensuring it's initialized.");
+        _initializeMainCameraController();
+        _initializeMainCameraController(); // Second call if needed
+        if (mounted) setState(() {});
       }
     }
     // --- End Camera Transitions ---
@@ -2559,9 +2662,13 @@ Future<void> _navigateToSettingsPage() async {
       setState(() {
         _isProcessingImage = false;
         _lastRequestedFeatureId = null;
-        if (previousFeature.id == objectDetectionFeature.id) _lastObjectResult = "";
-        else if (previousFeature.id == sceneDetectionFeature.id || previousFeature.id == textDetectionFeature.id) _lastSceneTextResult = "";
-        else if (previousFeature.id == currencyDetectionFeature.id) _lastCurrencyResult = "";
+        if (previousFeature.id == objectDetectionFeature.id)
+          _lastObjectResult = "";
+        else if (previousFeature.id == sceneDetectionFeature.id ||
+            previousFeature.id == textDetectionFeature.id)
+          _lastSceneTextResult = "";
+        else if (previousFeature.id == currencyDetectionFeature.id)
+          _lastCurrencyResult = "";
 
         if (previousFeature.id == supervisionFeature.id) {
           _isSupervisionProcessing = false;
@@ -2570,8 +2677,10 @@ Future<void> _navigateToSettingsPage() async {
           _supervisionHazardName = "";
           _supervisionIsHazardActive = false;
         }
-        if (isSwitchingFromFocus) { // Only reset focus state if truly leaving focus mode
-          debugPrint("[Nav] Resetting Focus state variables as we are leaving Focus Mode.");
+        if (isSwitchingFromFocus) {
+          // Only reset focus state if truly leaving focus mode
+          debugPrint(
+              "[Nav] Resetting Focus state variables as we are leaving Focus Mode.");
           _focusedObject = null;
           _isFocusPromptActive = false;
           _isFocusObjectDetectedInFrame = false;
@@ -2596,7 +2705,7 @@ Future<void> _navigateToSettingsPage() async {
     if (isSwitchingToFocusInitial) {
       if (mounted) {
         setState(() {
-          _isFocusPromptActive = true; 
+          _isFocusPromptActive = true;
           _isFocusObjectDetectedInFrame = false;
           _isFocusObjectCentered = false;
           _currentProximity = 0.0;
@@ -2604,23 +2713,14 @@ Future<void> _navigateToSettingsPage() async {
         });
       }
       _stopFocusFeedback(); // Ensure feedback is off initially
-      debugPrint("[Focus] Entered Focus Mode Initial State (Object prompt active).");
-    }
-    else { // Applies to ObjectDetection, HazardDetection, FocusMode (once object selected)
+      debugPrint(
+          "[Focus] Entered Focus Mode Initial State (Object prompt active).");
+    } else {
+      // Applies to ObjectDetection, HazardDetection, FocusMode (once object selected)
       _startDetectionTimerIfNeeded();
     }
     // --- End Final Page Setup ---
   }
-
-
-
-
-
-
-
-
-
-
 
 // --- Widget Build Logic ---
   @override
@@ -2650,54 +2750,49 @@ Future<void> _navigateToSettingsPage() async {
             Container(
                 key: ValueKey('placeholder_${currentFeature.id}'),
                 color: Colors.black),
-
           _buildFeaturePageView(),
           FeatureTitleBanner(
               title: currentFeature.title,
               backgroundColor: currentFeature.color),
-
           _buildTutorialButton(),
-
-          if (_currentPage >= 0 && !_isTutorialActive) 
+          if (_currentPage >= 0 && !_isTutorialActive)
             Align(
               alignment: Alignment.centerLeft,
               child: Padding(
                 padding: const EdgeInsets.only(left: 8.0),
                 child: IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 48.0),
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                      color: Colors.white, size: 48.0),
                   onPressed: _navigateToPreviousPage,
                   tooltip: 'Previous Feature',
                   style: IconButton.styleFrom(
                       backgroundColor: Colors.black.withOpacity(0.35),
                       padding: const EdgeInsets.all(10.0),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50))),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(50))),
                 ),
               ),
             ),
-
-          if (_currentPage <= _features.length - 1 && !_isTutorialActive) 
+          if (_currentPage <= _features.length - 1 && !_isTutorialActive)
             Align(
               alignment: Alignment.centerRight,
               child: Padding(
                 padding: const EdgeInsets.only(right: 8.0),
                 child: IconButton(
-                  icon: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 48.0),
+                  icon: const Icon(Icons.arrow_forward_ios_rounded,
+                      color: Colors.white, size: 48.0),
                   onPressed: _navigateToNextPage,
                   tooltip: 'Next Feature',
                   style: IconButton.styleFrom(
                       backgroundColor: Colors.black.withOpacity(0.35),
                       padding: const EdgeInsets.all(10.0),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50))),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(50))),
                 ),
               ),
             ),
-
-          if (!_isTutorialActive) 
-            _buildSettingsButton(),
-
-          if (!_isTutorialActive) 
-            _buildMainActionButton(currentFeature),
-
+          if (!_isTutorialActive) _buildSettingsButton(),
+          if (!_isTutorialActive) _buildMainActionButton(currentFeature),
           if (_isTutorialActive) _buildTutorialOverlay(),
         ],
       ),
@@ -2719,20 +2814,26 @@ Future<void> _navigateToSettingsPage() async {
               icon: const Icon(Icons.question_mark_rounded,
                   color: Colors.white,
                   size: 30.0,
-                  shadows: [ Shadow( blurRadius: 6.0, color: Colors.black54, offset: Offset(1.0, 1.0)) ]),
+                  shadows: [
+                    Shadow(
+                        blurRadius: 6.0,
+                        color: Colors.black54,
+                        offset: Offset(1.0, 1.0))
+                  ]),
               tooltip: 'Tap for feature help, Long-press for full tutorial',
               onPressed: () {
                 debugPrint("[Tutorial Button] Short-press detected!");
                 if (_isTutorialActive && _isTutorialSpeaking) {
                   _ttsService.stop();
-                  _isTutorialSpeaking = false; 
+                  _isTutorialSpeaking = false;
                   // _endTutorial(); // Consider if ending is always right here
                 } else {
                   _startCurrentFeatureTutorial();
                 }
               },
               onLongPress: () {
-                debugPrint("[Tutorial Button] Long-press detected! Calling _startFullTutorial...");
+                debugPrint(
+                    "[Tutorial Button] Long-press detected! Calling _startFullTutorial...");
                 _startFullTutorial(); // Not autoStart, user initiated
               },
             ),
@@ -2745,9 +2846,14 @@ Future<void> _navigateToSettingsPage() async {
 // In // --- Widget Build Logic --- section
 
   Widget _buildTutorialOverlay() {
-    final List<TutorialStepData> currentDataSource = _currentFeatureHelpSteps.isNotEmpty ? _currentFeatureHelpSteps : _tutorialStepsData;
+    final List<TutorialStepData> currentDataSource =
+        _currentFeatureHelpSteps.isNotEmpty
+            ? _currentFeatureHelpSteps
+            : _tutorialStepsData;
 
-    if (!_isTutorialActive || currentDataSource.isEmpty || _currentTutorialStep >= currentDataSource.length) {
+    if (!_isTutorialActive ||
+        currentDataSource.isEmpty ||
+        _currentTutorialStep >= currentDataSource.length) {
       if (_isTutorialActive && mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted && _isTutorialActive) _endTutorial();
@@ -2759,43 +2865,59 @@ Future<void> _navigateToSettingsPage() async {
 
     Widget mediaWidget = const SizedBox.shrink();
     if (stepData.mediaAssetPath != null) {
-      if (stepData.mediaType == MediaType.image || stepData.mediaType == MediaType.gif) {
+      if (stepData.mediaType == MediaType.image ||
+          stepData.mediaType == MediaType.gif) {
         mediaWidget = Image.asset(
           stepData.mediaAssetPath!,
-          height: stepData.mediaHeight, // Uses provided height or null (intrinsic)
+          height:
+              stepData.mediaHeight, // Uses provided height or null (intrinsic)
           fit: stepData.mediaFit,
           errorBuilder: (context, error, stackTrace) {
-            debugPrint("[Tutorial] Error loading image/gif asset: ${stepData.mediaAssetPath} - $error");
+            debugPrint(
+                "[Tutorial] Error loading image/gif asset: ${stepData.mediaAssetPath} - $error");
             return Icon(Icons.broken_image, color: Colors.grey[700], size: 50);
           },
         );
       } else if (stepData.mediaType == MediaType.video) {
-        mediaWidget = (_initializeVideoPlayerFuture != null && _tutorialVideoController != null)
+        mediaWidget = (_initializeVideoPlayerFuture != null &&
+                _tutorialVideoController != null)
             ? FutureBuilder(
                 future: _initializeVideoPlayerFuture,
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.done && _tutorialVideoController!.value.isInitialized) {
+                  if (snapshot.connectionState == ConnectionState.done &&
+                      _tutorialVideoController!.value.isInitialized) {
                     return SizedBox(
-                      height: stepData.mediaHeight ?? 250, // Default height for video if not specified
+                      height: stepData.mediaHeight ??
+                          250, // Default height for video if not specified
                       child: AspectRatio(
-                        aspectRatio: _tutorialVideoController!.value.aspectRatio,
+                        aspectRatio:
+                            _tutorialVideoController!.value.aspectRatio,
                         child: VideoPlayer(_tutorialVideoController!),
                       ),
                     );
                   } else if (snapshot.hasError) {
-                     debugPrint("[Tutorial] Video snapshot error: ${snapshot.error}");
-                    return Center(child: Text("Error loading video", style: TextStyle(color: Colors.red[300])));
+                    debugPrint(
+                        "[Tutorial] Video snapshot error: ${snapshot.error}");
+                    return Center(
+                        child: Text("Error loading video",
+                            style: TextStyle(color: Colors.red[300])));
                   }
                   return SizedBox(
-                     height: stepData.mediaHeight ?? 250,
-                     child: Center(child: _isVideoBuffering ? const CircularProgressIndicator(color: Colors.white) : Icon(Icons.play_circle_fill, color: Colors.grey[700], size: 50))
-                  );
+                      height: stepData.mediaHeight ?? 250,
+                      child: Center(
+                          child: _isVideoBuffering
+                              ? const CircularProgressIndicator(
+                                  color: Colors.white)
+                              : Icon(Icons.play_circle_fill,
+                                  color: Colors.grey[700], size: 50)));
                 },
               )
             : SizedBox(
                 height: stepData.mediaHeight ?? 250,
-                child: Center(child: Icon(Icons.videocam_off, color: Colors.grey[700], size: 50))
-              ); // Placeholder if controller not ready
+                child: Center(
+                    child: Icon(Icons.videocam_off,
+                        color: Colors.grey[700],
+                        size: 50))); // Placeholder if controller not ready
       }
     }
 
@@ -2804,25 +2926,35 @@ Future<void> _navigateToSettingsPage() async {
         onTap: () {
           // Allow skip if full tutorial is playing, or if it's feature help.
           // Also, if a video is playing and doesn't auto-advance, tap should skip.
-          bool isVideoPlayingNoAutoAdvance = stepData.mediaType == MediaType.video &&
-                                            _tutorialVideoController != null &&
-                                            _tutorialVideoController!.value.isPlaying &&
-                                            !stepData.autoAdvanceAfterMediaEnds;
+          bool isVideoPlayingNoAutoAdvance =
+              stepData.mediaType == MediaType.video &&
+                  _tutorialVideoController != null &&
+                  _tutorialVideoController!.value.isPlaying &&
+                  !stepData.autoAdvanceAfterMediaEnds;
 
-          if ((_isTutorialActive && _isTutorialSpeaking && currentDataSource.length > 1) || 
-              (_isTutorialActive && !_isTutorialSpeaking && isVideoPlayingNoAutoAdvance)) { // Allow skip if video is playing and user taps
+          if ((_isTutorialActive &&
+                  _isTutorialSpeaking &&
+                  currentDataSource.length > 1) ||
+              (_isTutorialActive &&
+                  !_isTutorialSpeaking &&
+                  isVideoPlayingNoAutoAdvance)) {
+            // Allow skip if video is playing and user taps
             _handleTutorialSkip();
-          } else if (_isTutorialActive && _currentFeatureHelpSteps.isNotEmpty && currentDataSource.length == 1){
+          } else if (_isTutorialActive &&
+              _currentFeatureHelpSteps.isNotEmpty &&
+              currentDataSource.length == 1) {
             // If it's single-step feature help, tapping dismisses it.
-             _endTutorial();
+            _endTutorial();
           }
         },
         behavior: HitTestBehavior.opaque,
         child: Container(
           color: Colors.black.withOpacity(0.9),
           padding: const EdgeInsets.symmetric(horizontal: 20.0).copyWith(
-            top: MediaQuery.of(context).padding.top + 20, // Account for status bar
-            bottom: MediaQuery.of(context).padding.bottom + 20, // Account for nav bar
+            top: MediaQuery.of(context).padding.top +
+                20, // Account for status bar
+            bottom: MediaQuery.of(context).padding.bottom +
+                20, // Account for nav bar
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -2845,34 +2977,48 @@ Future<void> _navigateToSettingsPage() async {
                   ),
                 ),
               ),
-               if (stepData.mediaType == MediaType.video && _tutorialVideoController != null && _tutorialVideoController!.value.isInitialized)
-                 const SizedBox(height:10), // spacer for video controls if they were visible
-                 Padding(
-                   padding: const EdgeInsets.only(top: 15.0, bottom: 10.0),
-                   child: Text(
-                    _isTutorialSpeaking ? "Tap to skip" : (stepData.mediaType == MediaType.video && _tutorialVideoController?.value.isPlaying == true ? "Tap to skip video or text" : "Tap to continue"),
-                    style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 14),
-                                 ),
-                 ),
+              if (stepData.mediaType == MediaType.video &&
+                  _tutorialVideoController != null &&
+                  _tutorialVideoController!.value.isInitialized)
+                const SizedBox(
+                    height:
+                        10), // spacer for video controls if they were visible
+              Padding(
+                padding: const EdgeInsets.only(top: 15.0, bottom: 10.0),
+                child: Text(
+                  _isTutorialSpeaking
+                      ? "Tap to skip"
+                      : (stepData.mediaType == MediaType.video &&
+                              _tutorialVideoController?.value.isPlaying == true
+                          ? "Tap to skip video or text"
+                          : "Tap to continue"),
+                  style: TextStyle(
+                      color: Colors.white.withOpacity(0.7), fontSize: 14),
+                ),
+              ),
             ],
           ),
         ),
       ),
     );
   }
+
   Widget _buildCameraDisplay() {
     if (_isMainCameraInitializing) {
       return Container(
           key: const ValueKey('placeholder_initializing'),
           color: Colors.black,
-          child: const Center(child: CircularProgressIndicator(color: Colors.white)));
-    } else if (_cameraController != null && _initializeControllerFuture != null) {
+          child: const Center(
+              child: CircularProgressIndicator(color: Colors.white)));
+    } else if (_cameraController != null &&
+        _initializeControllerFuture != null) {
       return FutureBuilder<void>(
           key: _cameraViewKey,
           future: _initializeControllerFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.done) {
-              if (_cameraController != null && _cameraController!.value.isInitialized) {
+              if (_cameraController != null &&
+                  _cameraController!.value.isInitialized) {
                 return CameraViewWidget(
                     cameraController: _cameraController,
                     initializeControllerFuture: _initializeControllerFuture);
@@ -2882,7 +3028,8 @@ Future<void> _navigateToSettingsPage() async {
             } else {
               return Container(
                   color: Colors.black,
-                  child: const Center(child: CircularProgressIndicator(color: Colors.white)));
+                  child: const Center(
+                      child: CircularProgressIndicator(color: Colors.white)));
             }
           });
     } else {
@@ -2894,7 +3041,8 @@ Future<void> _navigateToSettingsPage() async {
     return Container(
         key: ValueKey('placeholder_error_$message'),
         color: Colors.black,
-        child: Center(child: Text(message, style: const TextStyle(color: Colors.red))));
+        child: Center(
+            child: Text(message, style: const TextStyle(color: Colors.red))));
   }
 
   Widget _buildFeaturePageView() {
@@ -2905,7 +3053,9 @@ Future<void> _navigateToSettingsPage() async {
         onPageChanged: _onPageChanged,
         itemBuilder: (context, index) {
           if (index >= _features.length)
-            return Center(child: Text("Error: Invalid page index $index", style: const TextStyle(color: Colors.red)));
+            return Center(
+                child: Text("Error: Invalid page index $index",
+                    style: const TextStyle(color: Colors.red)));
           final feature = _features[index];
 
           switch (feature.id) {
@@ -2925,7 +3075,8 @@ Future<void> _navigateToSettingsPage() async {
             case 'text_detection':
               return TextDetectionPage(detectionResult: _lastSceneTextResult);
             case 'currency_detection': // This uses _lastCurrencyResult
-              return CurrencyDetectionPage(detectionResult: _lastCurrencyResult);
+              return CurrencyDetectionPage(
+                  detectionResult: _lastCurrencyResult);
             case 'focus_mode':
               return FocusModePage(
                   key: const ValueKey('focusMode'),
@@ -2933,7 +3084,7 @@ Future<void> _navigateToSettingsPage() async {
                   isObjectDetectedInFrame: _isFocusObjectDetectedInFrame,
                   isObjectCentered: _isFocusObjectCentered,
                   isPrompting: _isFocusPromptActive);
-            case 'supervision': 
+            case 'supervision':
               return SuperVisionPage(
                   key: const ValueKey('supervision'),
                   isLoading: _isSupervisionProcessing,
@@ -2942,7 +3093,9 @@ Future<void> _navigateToSettingsPage() async {
                   hazardName: _supervisionHazardName,
                   isHazardActive: _supervisionIsHazardActive);
             default:
-              return Center(child: Text('Unknown Page: ${feature.id}', style: const TextStyle(color: Colors.white)));
+              return Center(
+                  child: Text('Unknown Page: ${feature.id}',
+                      style: const TextStyle(color: Colors.white)));
           }
         });
   }
@@ -2954,37 +3107,54 @@ Future<void> _navigateToSettingsPage() async {
             child: Padding(
                 padding: const EdgeInsets.only(top: 10.0, right: 15.0),
                 child: IconButton(
-                    icon: const Icon(Icons.settings, color: Colors.white, size: 32.0, shadows: [ Shadow(blurRadius: 6.0, color: Colors.black54, offset: Offset(1.0, 1.0))]),
+                    icon: const Icon(Icons.settings,
+                        color: Colors.white,
+                        size: 32.0,
+                        shadows: [
+                          Shadow(
+                              blurRadius: 6.0,
+                              color: Colors.black54,
+                              offset: Offset(1.0, 1.0))
+                        ]),
                     onPressed: _navigateToSettingsPage,
                     tooltip: 'Settings'))));
   }
 
   Widget _buildMainActionButton(FeatureConfig currentFeature) {
-    final bool isRealtimeObjectOrHazard = currentFeature.id == objectDetectionFeature.id || currentFeature.id == hazardDetectionFeature.id;
+    final bool isRealtimeObjectOrHazard =
+        currentFeature.id == objectDetectionFeature.id ||
+            currentFeature.id == hazardDetectionFeature.id;
     final bool isBarcodePage = currentFeature.id == barcodeScannerFeature.id;
     final bool isFocusActivePage = currentFeature.id == focusModeFeature.id;
     final bool isSuperVisionPage = currentFeature.id == supervisionFeature.id;
-    final bool isCurrencyPage = currentFeature.id == currencyDetectionFeature.id; // Already here
+    final bool isCurrencyPage =
+        currentFeature.id == currencyDetectionFeature.id; // Already here
 
     VoidCallback? onTapAction;
     if (isSuperVisionPage) {
       onTapAction = () {
-        debugPrint("[Action Button] SuperVision tap - performing LLM analysis.");
-        _performManualDetection(supervisionFeature.id); 
+        debugPrint(
+            "[Action Button] SuperVision tap - performing LLM analysis.");
+        _performManualDetection(supervisionFeature.id);
       };
     } else if (isFocusActivePage) {
       onTapAction = () {
         debugPrint("[Action Button] Focus tap - listening for object.");
         if (!_speechEnabled) {
           _showStatusMessage('Speech not available', isError: true);
-          _initSpeech(); return;
+          _initSpeech();
+          return;
         }
-        if (_speechToText.isNotListening) _startListening(isForFocusObject: true);
-        else _stopListening();
+        if (_speechToText.isNotListening)
+          _startListening(isForFocusObject: true);
+        else
+          _stopListening();
       };
-    } else if (!isRealtimeObjectOrHazard && !isBarcodePage) { // This covers Scene, Text, and Currency
+    } else if (!isRealtimeObjectOrHazard && !isBarcodePage) {
+      // This covers Scene, Text, and Currency
       onTapAction = () {
-        debugPrint("[Action Button] Manual detection tap for ${currentFeature.id}");
+        debugPrint(
+            "[Action Button] Manual detection tap for ${currentFeature.id}");
         _performManualDetection(currentFeature.id);
       };
     }
@@ -2993,20 +3163,29 @@ Future<void> _navigateToSettingsPage() async {
       debugPrint("[Action Button] Long press - listening for general command.");
       if (!_speechEnabled) {
         _showStatusMessage('Speech not available', isError: true);
-        _initSpeech(); return;
+        _initSpeech();
+        return;
       }
-      if (_speechToText.isNotListening) _startListening(isForFocusObject: false);
-      else _stopListening();
+      if (_speechToText.isNotListening)
+        _startListening(isForFocusObject: false);
+      else
+        _stopListening();
     };
 
-    IconData iconData = Icons.mic_none; 
-    if (_isListening) iconData = Icons.mic;
-    else if (isCurrencyPage) { // Icon for currency page is already correct
+    IconData iconData = Icons.mic_none;
+    if (_isListening)
+      iconData = Icons.mic;
+    else if (isCurrencyPage) {
+      // Icon for currency page is already correct
       iconData = Icons.attach_money;
-    } else if (isFocusActivePage) iconData = Icons.filter_center_focus;
-    else if (isSuperVisionPage) iconData = Icons.auto_awesome; 
-    else if (!isRealtimeObjectOrHazard && !isBarcodePage) iconData = Icons.play_arrow; 
-    else iconData = Icons.camera_alt; 
+    } else if (isFocusActivePage)
+      iconData = Icons.filter_center_focus;
+    else if (isSuperVisionPage)
+      iconData = Icons.auto_awesome;
+    else if (!isRealtimeObjectOrHazard && !isBarcodePage)
+      iconData = Icons.play_arrow;
+    else
+      iconData = Icons.camera_alt;
 
     return ActionButton(
         onTap: onTapAction,

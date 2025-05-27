@@ -1,3 +1,5 @@
+// ignore_for_file: unused_element
+
 import 'package:flutter/material.dart';
 import '../core/models/feature_config.dart';
 
@@ -199,8 +201,8 @@ final List<FeatureConfig> availableFeatures = [
   focusModeFeature, // Index 3
   sceneDetectionFeature, // Index 4
   textDetectionFeature, // Index 5
-  currencyDetectionFeature, // Index 6 (new and added by me)
-  barcodeScannerFeature, // Index 7 (former index 6)
+  currencyDetectionFeature, // Index 6
+  barcodeScannerFeature, // Index 7
 ];
 
 // --- Placeholder Builder Function ---

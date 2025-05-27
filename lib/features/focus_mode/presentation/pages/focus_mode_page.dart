@@ -1,9 +1,12 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 
 class FocusModePage extends StatelessWidget {
   final String? focusedObject;
   final bool isPrompting; // True when waiting for user to name the object
-  final bool isObjectDetectedInFrame; // True if the focused object is detected anywhere
+  final bool
+      isObjectDetectedInFrame; // True if the focused object is detected anywhere
   final bool isObjectCentered; // True if the focused object is near the center
 
   const FocusModePage({
@@ -22,15 +25,19 @@ class FocusModePage extends StatelessWidget {
       fontWeight: FontWeight.bold,
       color: Colors.white,
       shadows: [
-        Shadow(blurRadius: 8.0, color: Colors.black87, offset: Offset(2.0, 2.0)),
+        Shadow(
+            blurRadius: 8.0, color: Colors.black87, offset: Offset(2.0, 2.0)),
       ],
     );
     final TextStyle foundStyle = baseStyle.copyWith(
       fontSize: 48,
       color: const Color.fromARGB(255, 255, 227, 14), // Highlight when found
-       shadows: [
+      shadows: [
         Shadow(blurRadius: 10.0, color: Colors.black, offset: Offset(3.0, 3.0)),
-        Shadow(blurRadius: 15.0, color: Colors.white.withOpacity(0.4), offset: Offset(0,0)),
+        Shadow(
+            blurRadius: 15.0,
+            color: Colors.white.withOpacity(0.4),
+            offset: Offset(0, 0)),
       ],
     );
 
@@ -60,7 +67,8 @@ class FocusModePage extends StatelessWidget {
       } else if (isObjectDetectedInFrame) {
         content = Text(
           "Finding: ${focusedObject ?? ''}",
-          style: baseStyle.copyWith(color: Colors.orangeAccent), // Indicate searching/detected
+          style: baseStyle.copyWith(
+              color: Colors.orangeAccent), // Indicate searching/detected
           textAlign: TextAlign.center,
         );
       } else {
