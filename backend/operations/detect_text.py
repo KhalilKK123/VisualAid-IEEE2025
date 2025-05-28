@@ -4,24 +4,10 @@ from model_config import *
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"  # Keep if needed
 
-from flask import Flask, request, jsonify, render_template
-from flask_cors import CORS
-from flask_socketio import SocketIO, emit
-from flask_sqlalchemy import SQLAlchemy
 import cv2
-import numpy as np
-import torch
-import io
-import base64
-import logging
 from PIL import Image
 import pytesseract  # For OCR
-import torchvision.models as models  # For Places365
-import torchvision.transforms as transforms  # For Places365
-import requests
 import time
-import sys
-from ultralytics import YOLO  # Using YOLO from ultralytics
 
 
 def detect_text(image_np, language_code=DEFAULT_OCR_LANG):

@@ -2,30 +2,15 @@ import os
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"  # Keep if needed
 
-from flask import Flask, request, jsonify, render_template
-from flask_cors import CORS
-from flask_socketio import SocketIO, emit
-from flask_sqlalchemy import SQLAlchemy
-import cv2
-import numpy as np
 import torch
-import io
-import base64
 import logging
-from PIL import Image
 import pytesseract  # For OCR
 import torchvision.models as models  # For Places365
 import torchvision.transforms as transforms  # For Places365
 import requests
-import time
 import sys
 from ultralytics import YOLO  # Using YOLO from ultralytics
 
-
-# --- Ollama Configuration ---
-OLLAMA_MODEL_NAME = os.environ.get("OLLAMA_MODEL", "gemma3:12b")
-OLLAMA_API_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434/api/generate")
-OLLAMA_REQUEST_TIMEOUT = 60
 
 # --- Debug Configuration ---
 SAVE_OCR_IMAGES = False
@@ -39,9 +24,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-logger.info(
-    f"Ollama Configuration: Model='{OLLAMA_MODEL_NAME}', URL='{OLLAMA_API_URL}'"
-)
 
 # --- Tesseract Configuration ---
 try:
