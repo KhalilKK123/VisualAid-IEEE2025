@@ -3,7 +3,7 @@
 import os
 
 from model_config import *
-from ollama_config import *
+from ollama import *
 from operations.detect_objects import *
 from operations.detect_scene import *
 from operations.detect_text import *

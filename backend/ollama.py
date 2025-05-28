@@ -33,17 +33,19 @@ def get_llm_feature_choice(image_np, client_sid="Unknown"):
             return None
         image_base64 = base64.b64encode(buffer.tobytes()).decode("utf-8")
 
-        prompt = (
-            "Analyze the provided image. Based *only* on the main content, "
-            "which of the following analysis types is MOST appropriate? "
-            "Choose exactly ONE:\n"
-            "- 'object_detection': If the image focuses on identifying multiple general items or objects.\n"
-            "- 'hazard_detection': If the image seems to contain items that could be hazards (e.g., a car, a stop sign, a knife). The system will then verify.\n"
-            "- 'scene_detection': If the image primarily shows an overall environment, location, or setting.\n"
-            "- 'text_detection': If the image contains significant readable text (like a document, sign, or label).\n"
-            "- 'currency_detection': If the image clearly shows paper money or coins.\n"  # Added currency_detection
-            "Respond with ONLY the chosen identifier string (e.g., 'scene_detection') and nothing else."
-        )
+        # prompt = (
+        #     "Analyze the provided image. Based *only* on the main content, "
+        #     "which of the following analysis types is MOST appropriate? "
+        #     "Choose exactly ONE:\n"
+        #     "- 'object_detection': Only choose this mode if the image has an object or thing in the center of the screen, as if the user is displaying that item.\n"
+        #     "- 'hazard_detection': If the image seems to contain items that could be hazards (e.g., a car, a stop sign, a knife, an animal). You have to be incredibly sure this could be a clear and obvious threat for a blind or partially blind person to select this option. \n"
+        #     "- 'scene_detection': Only choose this mode if the center of the image is not focused on one particular object or thing and is instead taking a wide angle that doesn't have anything prominently displayed in the center and is showing a general scene.\n"
+        #     "- 'text_detection': If the image contains significant readable text (like a document, sign, or label).\n"
+        #     "- 'currency_detection': If the image clearly shows paper money.\n"
+        #     "Respond with ONLY the chosen identifier string (e.g., 'scene_detection') and nothing else."
+        # )
+
+        prompt = "You are an LLM that exists as middleware between the client and the server. The client is an application that helps  blind or partially blind user by providing them a camera that would take an image and send it over to the server. The server contains 5 machine learning models: object_detection, hazard_detection, scene_detection, text_detection, and text_detection. One of the models receives the image sent in by the client and outputs a response, which is then sent back to the client. Your job is to determine which model is best for the job. Simply reply with 'object_detection' if the image displayed is clearly centered and focused around a single object or thing, especially if the object in the image is close to the camera. Simply reply with 'hazard_detection' if the image shows something that could be dangerous to a user, like a stop sign or a knife or an animal. Simply reply with 'scene_detection' if the image is not focused on any particular thing and is instead showing an entire room or environment. Simply reply with 'text_detection' if the image has a lot of text clearly and legibly centered in the screen. Simply reply with 'currency_detection' if the image shows money of any kind."
         payload = {
             "model": OLLAMA_MODEL_NAME,
             "prompt": prompt,
@@ -69,6 +71,7 @@ def get_llm_feature_choice(image_np, client_sid="Unknown"):
             .replace("'", "")
             .replace('"', "")
         )
+
         logger.debug(f"[{client_sid}] Raw response from Ollama: '{llm_response_text}'")
 
         chosen_feature = None
