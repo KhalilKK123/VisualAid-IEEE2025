@@ -75,8 +75,8 @@ elif DEFAULT_OCR_LANG not in SUPPORTED_OCR_LANGS:
 OBJECT_DETECTION_CONFIDENCE = 0.55
 MAX_OBJECTS_TO_RETURN = 4
 CURRENCY_DETECTION_CONFIDENCE = 0.6  # Adjustable confidence for your currency model
-CURRENCY_MODEL_PATH = "Best.pt"  # Path to your trained currency model
-CURRENCY_CLASS_NAMES_PATH = "aed_class_names.txt"  # Path to your class names file
+CURRENCY_MODEL_PATH = "models/best.pt"  # Path to your trained currency model
+CURRENCY_CLASS_NAMES_PATH = "models/aed_class_names.txt"  # Path to your class names file
 
 
 # --- ML Model Loading ---
