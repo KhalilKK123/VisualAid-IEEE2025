@@ -1,12 +1,13 @@
 import os
-import re # Import regex module
+import re
+import unicodedata # Import unicodedata for character properties
 
-from model_config import *
+from model_config import * # Assuming this correctly sets up logger, etc.
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"  # Keep if needed
 
 import cv2
 from PIL import Image
-import pytesseract  # For OCR
+import pytesseract
 import time
 
 
@@ -23,6 +24,12 @@ def detect_text(image_np, language_code=DEFAULT_OCR_LANG):
                 f"Default language '{DEFAULT_OCR_LANG}' is also not available. OCR cannot proceed."
             )
             return "Error: OCR Language Not Available"
+
+    # Ensure TESSDATA_PREFIX is set if it's not already,
+    # especially important for custom language data
+    # pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe' # Example, set if Tesseract not in PATH
+    # os.environ['TESSDATA_PREFIX'] = r'C:\Program Files\Tesseract-OCR\tessdata' # Example, set if tessdata not in default location
+
 
     if SAVE_OCR_IMAGES:
         try:
@@ -47,42 +54,61 @@ def detect_text(image_np, language_code=DEFAULT_OCR_LANG):
             else image_np
         )
         img_pil = Image.fromarray(gray_img)
-        custom_config = f"-l {validated_lang} --oem 3 --psm 6"
+        custom_config = f"-l {validated_lang} --oem 3 --psm 6" # PSM 6 is generally good for uniform block of text
         logger.debug(f"Using Tesseract config: {custom_config}")
         detected_text = pytesseract.image_to_string(img_pil, config=custom_config)
         
-        # --- Heuristic Filtering Starts Here ---
+        # --- Language-Agnostic Heuristic Filtering Starts Here ---
         filtered_lines = []
         for line in detected_text.splitlines():
             stripped_line = line.strip()
             if not stripped_line:
                 continue
 
-            # Heuristic 1 & 2: Remove non-alphanumeric junk and minimum length
-            # Keep letters, numbers, and basic punctuation (.,!?-')
-            cleaned_line = re.sub(r'[^a-zA-Z0-9\s.,!?-]', '', stripped_line)
+            # Heuristic 1: Filter out unprintable characters and control characters.
+            # This is more robust than explicit a-zA-Z, allowing for any script.
+            # We keep characters that are 'printable' (letters, numbers, symbols, punctuation, spaces)
+            # and remove explicit control characters or unassigned ones.
+            # Using unicodedata.category to be precise:
+            # L (Letter), N (Number), P (Punctuation), S (Symbol), Zs (Space separator)
+            # Other categories like C (Control) or M (Mark) might be noise.
+            cleaned_line_chars = []
+            for char in stripped_line:
+                if unicodedata.category(char).startswith(('L', 'N', 'P', 'S', 'Z')):
+                    cleaned_line_chars.append(char)
+                elif char in ('\n', '\r', '\t'): # Allow common whitespace
+                    cleaned_line_chars.append(char)
             
-            # Remove multiple spaces
+            cleaned_line = "".join(cleaned_line_chars)
+            
+            # Remove multiple spaces and strip leading/trailing whitespace
             cleaned_line = re.sub(r'\s+', ' ', cleaned_line).strip()
 
             if not cleaned_line: # After cleaning, if it's empty, skip
                 continue
 
-            # Heuristic 3: Alpha-Numeric Ratio Check
-            alpha_chars = sum(c.isalpha() for c in cleaned_line)
+            # Heuristic 2: Character Ratio Check (more general than just 'alpha')
+            # Check the proportion of 'meaningful' characters (letters, numbers, punctuation)
+            # versus total characters. This helps filter lines with too many unassigned or
+            # strange symbols that might slip past the initial cleaning.
+            meaningful_chars = sum(
+                1 for char in cleaned_line 
+                if unicodedata.category(char).startswith(('L', 'N', 'P', 'S')) # Letters, Numbers, Punctuation, Symbols
+            )
             total_chars = len(cleaned_line)
             
-            # Define a threshold for what constitutes "meaningful" text.
-            # This might need tuning based on your specific use case.
-            # A low ratio often indicates gibberish or a lot of numbers/symbols.
-            ALPHA_RATIO_THRESHOLD = 0.5 # At least 50% of characters should be alphabetic
+            # Tunable threshold for meaningful characters.
+            # This needs to be carefully considered. For gibberish, this ratio will often be very low.
+            # For actual text (even foreign scripts), it should be high.
+            MEANINGFUL_CHAR_RATIO_THRESHOLD = 0.4 # At least 40% meaningful chars (can be adjusted)
             
-            if total_chars > 0 and (alpha_chars / total_chars) < ALPHA_RATIO_THRESHOLD:
-                logger.debug(f"Discarding line due to low alpha ratio: '{cleaned_line}' (Ratio: {alpha_chars/total_chars:.2f})")
+            if total_chars > 0 and (meaningful_chars / total_chars) < MEANINGFUL_CHAR_RATIO_THRESHOLD:
+                logger.debug(f"Discarding line due to low meaningful character ratio: '{cleaned_line}' (Ratio: {meaningful_chars/total_chars:.2f})")
                 continue
 
-            # Heuristic 2: Minimum line length check (after cleaning)
-            MIN_LINE_LENGTH = 3 # Adjust as needed
+            # Heuristic 3: Minimum line length check (after cleaning)
+            # This is still valuable, as very short lines are often noise regardless of script.
+            MIN_LINE_LENGTH = 2 # Adjusted to be more lenient for short words/codes
             if len(cleaned_line) < MIN_LINE_LENGTH:
                 logger.debug(f"Discarding line due to short length: '{cleaned_line}' (Length: {len(cleaned_line)})")
                 continue
@@ -90,7 +116,7 @@ def detect_text(image_np, language_code=DEFAULT_OCR_LANG):
             filtered_lines.append(cleaned_line)
         
         result_str = "\n".join(filtered_lines)
-        # --- Heuristic Filtering Ends Here ---
+        # --- Language-Agnostic Heuristic Filtering Ends Here ---
 
         if not result_str:
             logger.debug(f"Tesseract ({validated_lang}): No meaningful text found after filtering.")
