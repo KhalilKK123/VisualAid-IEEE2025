@@ -1,7 +1,9 @@
 # backend/app.py
 
 import os
+
 from model_config import *
+
 from ollama import *
 from operations.detect_objects import detect_objects
 from operations.detect_scene import detect_scene
@@ -20,20 +22,10 @@ import logging
 import time
 import sys
 
-
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
-
-if "OLLAMA_MODEL_NAME" in globals() and "OLLAMA_API_URL" in globals():
-    logger.info(
-        f"Ollama Configuration: Model='{OLLAMA_MODEL_NAME}', URL='{OLLAMA_API_URL}'"
-    )
-else:
-    logger.warning(
-        "Ollama configuration (OLLAMA_MODEL_NAME, OLLAMA_API_URL) not found in model_config.py or globals."
-    )
 
 
 template_dir = os.path.abspath(
@@ -69,7 +61,7 @@ def handle_message(data):
     client_sid = request.sid
     start_time = time.time()
     detection_type_from_payload = "unknown"
-    supervision_request_type = None  # Initialize
+    supervision_request_type = None
     final_response_payload = None
 
     try:
@@ -101,7 +93,6 @@ def handle_message(data):
 
         try:
             if image_data.startswith("data:image"):
-                # header, encoded = image_data.split(",", 1) # Not using header
                 _, encoded = image_data.split(",", 1)
             else:
                 encoded = image_data  # Assume it's already base64 if no prefix
@@ -131,11 +122,7 @@ def handle_message(data):
             logger.info(
                 f"Handling SuperVision LLM routing request from {client_sid}..."
             )
-            # Ensure OLLAMA_MODEL_NAME and OLLAMA_API_URL are available for get_llm_feature_choice
-            # These should be imported from model_config.py
-            chosen_feature_by_llm = get_llm_feature_choice(
-                image_np, client_sid
-            )  # Pass client_sid if used by the function
+            chosen_feature_by_llm = get_llm_feature_choice(image_np, client_sid)
             supervision_string_result = "Error: LLM feature execution failed"
 
             if chosen_feature_by_llm:
@@ -167,7 +154,6 @@ def handle_message(data):
                                 f"Object/Hazard detection issue for SuperVision: {obj_dict_result.get('status')}",
                             )
                     elif chosen_feature_by_llm == "scene_detection":
-                        # detect_scene returns a string label or an error message
                         scene_label = detect_scene(image_np)
                         if "Error" in scene_label or "Unknown" in scene_label:
                             supervision_string_result = f"Scene analysis: {scene_label}"
@@ -176,20 +162,29 @@ def handle_message(data):
                                 f"The scene is likely a {scene_label}."
                             )
                     elif chosen_feature_by_llm == "text_detection":
-                        # detect_text returns a string of detected text or an error/no text message
-                        text_content = detect_text(
-                            image_np, DEFAULT_OCR_LANG
-                        )  # DEFAULT_OCR_LANG from model_config
+                        # DEFAULT_OCR_LANG should be available from `from model_config import *`
+                        text_content = detect_text(image_np, DEFAULT_OCR_LANG)
                         if "Error" in text_content:
                             supervision_string_result = f"Text analysis: {text_content}"
                         elif "No text detected" in text_content:
                             supervision_string_result = "No text found in the image."
                         else:
-                            supervision_string_result = (
-                                f"The image contains the following text: {text_content}"
+                            logger.info(
+                                f"[{client_sid}] Text detected by OCR (Supervision), attempting LLM cleaning. Original length: {len(text_content)}"
                             )
+                            cleaned_text = clean_text_with_llm(text_content, client_sid)
+                            if cleaned_text:
+                                supervision_string_result = cleaned_text
+                                logger.info(
+                                    f"[{client_sid}] Text cleaning successful (Supervision). Cleaned length: {len(cleaned_text)}"
+                                )
+                            else:
+                                supervision_string_result = text_content
+                                logger.warning(
+                                    f"[{client_sid}] Text cleaning failed (Supervision). Using original OCR text."
+                                )
                     elif chosen_feature_by_llm == "currency_detection":
-                        currency_output = detect_currency(image_np)  # Returns dict
+                        currency_output = detect_currency(image_np)
                         if currency_output.get("status") == "ok":
                             supervision_string_result = f"Detected currency: {currency_output.get('currency', 'Unknown currency')}"
                         elif currency_output.get("status") == "none":
@@ -258,21 +253,19 @@ def handle_message(data):
                         image_np, focus_object=focus_object_name
                     )
             elif detection_type_from_payload == "scene_detection":
-                scene_label = detect_scene(image_np)  # Returns a string
-                if "Error" in scene_label:  # detect_scene indicates error with "Error"
+                scene_label = detect_scene(image_np)
+                if "Error" in scene_label:
                     detection_function_output = {
                         "status": "error",
                         "message": scene_label,
                     }
-                elif (
-                    "Unknown" in scene_label
-                ):  # detect_scene indicates no confident detection with "Unknown"
+                elif "Unknown" in scene_label:
                     detection_function_output = {"status": "none", "scene": scene_label}
                 else:
                     detection_function_output = {"status": "ok", "scene": scene_label}
             elif detection_type_from_payload == "text_detection":
+                # DEFAULT_OCR_LANG and SUPPORTED_OCR_LANGS should be from model_config
                 requested_language = data.get("language", DEFAULT_OCR_LANG).lower()
-                # SUPPORTED_OCR_LANGS should be imported from model_config
                 validated_language = (
                     requested_language
                     if requested_language in SUPPORTED_OCR_LANGS
@@ -282,9 +275,10 @@ def handle_message(data):
                     logger.warning(
                         f"Client {client_sid} invalid lang '{requested_language}', using '{DEFAULT_OCR_LANG}'."
                     )
+
                 text_result_str = detect_text(
                     image_np, language_code=validated_language
-                )  # Returns a string
+                )
                 if "Error" in text_result_str:
                     detection_function_output = {
                         "status": "error",
@@ -296,18 +290,31 @@ def handle_message(data):
                         "text": text_result_str,
                     }
                 else:
-                    detection_function_output = {
-                        "status": "ok",
-                        "text": text_result_str,
-                    }
-            elif (
-                detection_type_from_payload == "hazard_detection"
-            ):  # Assumes detect_objects handles this
-                detection_function_output = detect_objects(
-                    image_np
-                )  # Or a specialized hazard function
+                    logger.info(
+                        f"[{client_sid}] Text detected by OCR (Direct), attempting LLM cleaning. Original length: {len(text_result_str)}"
+                    )
+                    cleaned_text = clean_text_with_llm(text_result_str, client_sid)
+                    if cleaned_text:
+                        detection_function_output = {
+                            "status": "ok",
+                            "text": cleaned_text,
+                        }
+                        logger.info(
+                            f"[{client_sid}] Text cleaning successful (Direct). Cleaned length: {len(cleaned_text)}"
+                        )
+                    else:
+                        detection_function_output = {
+                            "status": "ok",
+                            "text": text_result_str,
+                            "warning": "Text cleaning by LLM failed, showing original OCR text.",
+                        }
+                        logger.warning(
+                            f"[{client_sid}] Text cleaning failed (Direct). Using original OCR text."
+                        )
+            elif detection_type_from_payload == "hazard_detection":
+                detection_function_output = detect_objects(image_np)
             elif detection_type_from_payload == "currency_detection":
-                detection_function_output = detect_currency(image_np)  # Returns dict
+                detection_function_output = detect_currency(image_np)
             else:
                 logger.warning(
                     f"Unsupported direct type '{detection_type_from_payload}' from {client_sid}"
@@ -316,6 +323,7 @@ def handle_message(data):
                     "status": "error",
                     "message": f"Unsupported type '{detection_type_from_payload}'",
                 }
+
             final_response_payload = {"result": detection_function_output}
 
         if final_response_payload:
@@ -343,9 +351,8 @@ def handle_message(data):
             )
             emit("response", final_response_payload)
         else:
-            # This case should ideally not be reached if logic is correct
             logger.error(
-                f"[{client_sid}] Failed to generate a response payload for type '{detection_type_from_payload}'. This indicates a code flow error."
+                f"[{client_sid}] Failed to generate a response payload for type '{detection_type_from_payload}'."
             )
             emit(
                 "response",
@@ -372,8 +379,7 @@ def handle_message(data):
             }
             if (
                 detection_type_from_payload == "supervision"
-                and supervision_request_type
-                == "llm_route"  # Check supervision_request_type here
+                and supervision_request_type == "llm_route"
             ):
                 error_resp["feature_id"] = "supervision_error"
                 error_resp["is_from_supervision_llm"] = True
@@ -387,7 +393,7 @@ def default_error_handler(e):
     client_sid = request.sid if request else "UnknownSID"
     logger.error(f"Unhandled WebSocket Error for SID {client_sid}: {e}", exc_info=True)
     try:
-        if client_sid != "UnknownSID":  # Avoid emitting if SID is not available
+        if client_sid != "UnknownSID":
             emit(
                 "response",
                 {"result": {"status": "error", "message": "Internal WebSocket error."}},
@@ -432,22 +438,20 @@ if __name__ == "__main__":
     host_ip = os.environ.get("FLASK_HOST", "0.0.0.0")
     port_num = int(os.environ.get("FLASK_PORT", 5000))
     debug_mode = os.environ.get("FLASK_DEBUG", "False").lower() in ("true", "1", "t")
-    use_reloader = debug_mode  # Typically reloader is used in debug mode
+    use_reloader = debug_mode
 
     logger.info(
         f"Server listening on http://{host_ip}:{port_num} (Debug: {debug_mode}, Reloader: {use_reloader})"
     )
 
-    # Log Ollama configuration if variables are available
-    if "OLLAMA_MODEL_NAME" in globals() and "OLLAMA_API_URL" in globals():
-        logger.info(f" * Ollama Model: {OLLAMA_MODEL_NAME}, URL: {OLLAMA_API_URL}")
-    else:
-        logger.info(
-            " * Ollama Model: Not configured / variables not found in model_config"
-        )
+    # Log Ollama configuration
+    # OLLAMA_MODEL_NAME, OLLAMA_TEXT_CLEANING_MODEL_NAME, OLLAMA_API_URL are defined globally
+    logger.info(
+        f" * Ollama Routing Model: {OLLAMA_MODEL_NAME}, Text Cleaning Model: {OLLAMA_TEXT_CLEANING_MODEL_NAME}, URL: {OLLAMA_API_URL}"
+    )
 
     # Log Roboflow configuration for currency detection
-    # ROBOFLOW_MODEL_ENDPOINT and CURRENCY_DETECTION_CONFIDENCE must be defined in model_config.py
+    # Assuming ROBOFLOW_MODEL_ENDPOINT and CURRENCY_DETECTION_CONFIDENCE are in model_config.py
     if (
         "ROBOFLOW_MODEL_ENDPOINT" in globals()
         and "CURRENCY_DETECTION_CONFIDENCE" in globals()
@@ -467,7 +471,6 @@ if __name__ == "__main__":
             host=host_ip,
             port=port_num,
             use_reloader=use_reloader,
-            # allow_unsafe_werkzeug is needed for reloader in some environments
             allow_unsafe_werkzeug=True if use_reloader else False,
         )
     except OSError as os_e:
@@ -479,9 +482,9 @@ if __name__ == "__main__":
             logger.critical(
                 f"Failed to start server due to OS Error: {os_e}", exc_info=True
             )
-        sys.exit(1)  # Exit if server cannot start
+        sys.exit(1)
     except Exception as run_e:
         logger.critical(f"Failed to start server: {run_e}", exc_info=True)
-        sys.exit(1)  # Exit if server cannot start
+        sys.exit(1)
     finally:
         logger.info("Server shutdown.")
