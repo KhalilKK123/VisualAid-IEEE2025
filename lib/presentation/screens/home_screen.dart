@@ -1447,8 +1447,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (!mounted) return;
 
     if (featureId == objectDetectionFeature.id && status == 'ok') {
-      // Hazard detection is coupled with object detection results in the backend
-      // Process hazards based on all objects detected, before category filtering for display
       List<Map<String, dynamic>> allDetectionsForHazardCheck = (resultData['detections'] as List<dynamic>? ?? [])
           .map((d) => d as Map<String, dynamic>)
           .toList();
@@ -1592,13 +1590,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           if (status == 'ok') {
             final String currencyName =
                 resultData['currency'] as String? ?? "Unknown Currency";
-            displayResult = currencyName;
+            // Clean the currency name for both display and TTS
+            final String cleanedCurrencyName = currencyName.replaceAll('_', ' ');
+            displayResult = cleanedCurrencyName;
             speakResult = true;
-            textToSpeak = "Currency detected: $displayResult";
+            textToSpeak = "Currency detected: $cleanedCurrencyName";
           } else if (status == 'none') {
             displayResult = resultData['message'] ?? "No currency detected";
-          } else {
+            // Also ensure TTS reflects this accurately if needed
+            textToSpeak = displayResult; 
+            speakResult = true; // Speak "No currency detected"
+          } else { // Error status
             displayResult = resultData['message'] ?? "Currency Error";
+            textToSpeak = displayResult;
+            speakResult = true; // Speak the error
           }
           _lastCurrencyResult = displayResult;
         }
@@ -1611,6 +1616,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       }
     });
   }
+
 
   Map<String, dynamic> _processSupervisionObjectDetectionResult(
       String rawDetections) {
