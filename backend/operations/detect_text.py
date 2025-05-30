@@ -60,6 +60,7 @@ def detect_text(image_np, language_code=DEFAULT_OCR_LANG):
             )
             log_text = result_str.replace("\n", " ").replace("\r", "")[:100]
             logger.debug(f"Tesseract ({validated_lang}) OK: Found '{log_text}...'")
+            print(f"AAAAAAAAAAAAAAAAAAAAAAAAAAAAA ({result_str})")
             return result_str
     except pytesseract.TesseractNotFoundError:
         logger.error("Tesseract executable not found.")
