@@ -738,7 +738,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         return [
           TutorialStepData(
               text:
-                  "Object Detection: This feature runs in real-time. Point your camera, and it will announce recognized objects. No need to tap the button unless you want to use voice commands via long press. You can filter object categories in settings.")
+                  "Object Detection: This feature runs in real-time. Point your camera, and it will announce recognized objects along with their reltaive location. No need to tap the button unless you want to use voice commands via long press. You can filter object categories by holding the main button and saying the object name, or you do so from the settings page.")
         ];
       case 'hazard_detection':
         return [
