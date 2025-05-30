@@ -144,7 +144,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   // --- Constants ------------------------------------------------------------------------------------------
   static const String _alertSoundPath = "audio/alert.mp3";
   static const String _beepSoundPath = "assets/audio/short_beep.mp3";
-  static const Duration _detectionInterval = Duration(seconds: 3);
+  static const Duration _detectionInterval = Duration(seconds: 5);
   static const Duration _hazardAlertPersistence = Duration(seconds: 4);
   static const Duration _focusFoundAnnounceCooldown = Duration(seconds: 5);
   static const double _focusCenterThreshold = 0.15;
@@ -1447,13 +1447,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (!mounted) return;
 
     if (featureId == objectDetectionFeature.id && status == 'ok') {
-      // List<String> currentDetections = (resultData['detections']
-      //             as List<dynamic>?)
-      //         ?.map((d) => (d as Map<String, dynamic>)['name'] as String? ?? '')
-      //         .where((name) => name.isNotEmpty)
-      //         .toList() ??
-      //     [];
-      //  _processHazardDetection(currentDetections); // This will trigger alerts if needed
+      // Hazard detection is coupled with object detection results in the backend
+      // Process hazards based on all objects detected, before category filtering for display
+      List<Map<String, dynamic>> allDetectionsForHazardCheck = (resultData['detections'] as List<dynamic>? ?? [])
+          .map((d) => d as Map<String, dynamic>)
+          .toList();
+      List<String> allDetectedNamesForHazardCheck = allDetectionsForHazardCheck
+          .map((d) => (d['name'] as String? ?? '').trim())
+          .where((name) => name.isNotEmpty)
+          .toList();
+    //  _processHazardDetection(allDetectedNamesForHazardCheck); // This will trigger alerts if needed
     } else if (featureId == hazardDetectionFeature.id && status == 'ok') {
       List<String> currentDetections = (resultData['detections']
                   as List<dynamic>?)
@@ -1515,22 +1518,53 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
         if (featureId == objectDetectionFeature.id) {
           if (status == 'ok') {
-            List<String> names = (resultData['detections'] as List<dynamic>?)
-                    ?.map((d) =>
-                        (d as Map<String, dynamic>)['name'] as String? ?? '')
-                    .where((name) => name.isNotEmpty)
-                    .toList() ??
-                [];
-            List<String> filteredNames = _filterObjectsByCategory(names);
-            displayResult = filteredNames.isNotEmpty
-                ? filteredNames.join(', ')
-                : "No objects in category";
-            speakResult = filteredNames.isNotEmpty;
-            textToSpeak = displayResult;
+            List<Map<String, dynamic>> allDetectionsFullData = (resultData['detections'] as List<dynamic>? ?? [])
+                .map((d) => d as Map<String, dynamic>)
+                .toList();
+
+            if (allDetectionsFullData.isEmpty) {
+              displayResult = "No objects detected";
+              speakResult = true;
+              textToSpeak = displayResult;
+            } else {
+              // Objects were detected, now filter them by category
+              List<Map<String, dynamic>> categoryFilteredDetections = allDetectionsFullData.where((detection) {
+                  String name = (detection['name'] as String? ?? '').toLowerCase();
+                  if (_selectedObjectCategory == 'all') return true;
+                  return cocoObjectToCategoryMap[name] == _selectedObjectCategory;
+              }).toList();
+
+              if (categoryFilteredDetections.isNotEmpty) {
+                List<String> descriptions = [];
+                // The backend already sends detections sorted by confidence and limited by MAX_OBJECTS_TO_RETURN.
+                // So, we iterate `categoryFilteredDetections`.
+                for (var detection in categoryFilteredDetections) {
+                  String name = detection['name'] as String? ?? 'Unknown Object';
+                  double centerX = (detection['center_x'] as num?)?.toDouble() ?? 0.5;
+                  double centerY = (detection['center_y'] as num?)?.toDouble() ?? 0.5;
+                  String location = _getObjectLocation(centerX, centerY);
+                  
+                  String capitalizedName = name.isNotEmpty ? name[0].toUpperCase() + name.substring(1) : 'Object';
+                  descriptions.add("${capitalizedName.replaceAll('_', ' ')} $location");
+                }
+                displayResult = descriptions.join(', ');
+                speakResult = true;
+                textToSpeak = displayResult;
+              } else {
+                // Objects were detected, but none matched the current category filter
+                displayResult = "No objects in category: ${objectDetectionCategories[_selectedObjectCategory] ?? _selectedObjectCategory}";
+                speakResult = true; 
+                textToSpeak = displayResult;
+              }
+            }
           } else if (status == 'none') {
             displayResult = "No objects detected";
-          } else {
+            speakResult = true; 
+            textToSpeak = displayResult;
+          } else { // Error status
             displayResult = resultData['message'] ?? "Detection Error";
+            speakResult = true; 
+            textToSpeak = displayResult;
           }
           _lastObjectResult = displayResult;
         } else if (featureId == sceneDetectionFeature.id) {
@@ -1555,21 +1589,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           }
           _lastSceneTextResult = displayResult;
         } else if (featureId == currencyDetectionFeature.id) {
-          // Updated for currency
           if (status == 'ok') {
-            // Backend sends 'currency' (name) and 'confidence'
             final String currencyName =
                 resultData['currency'] as String? ?? "Unknown Currency";
-            // final double confidence = (resultData['confidence'] as num?)?.toDouble() ?? 0.0;
-            // For now, just display the name as per current CurrencyDetectionPage
             displayResult = currencyName;
             speakResult = true;
             textToSpeak = "Currency detected: $displayResult";
           } else if (status == 'none') {
-            displayResult = resultData['message'] ??
-                "No currency detected"; // Use message if available
+            displayResult = resultData['message'] ?? "No currency detected";
           } else {
-            // error
             displayResult = resultData['message'] ?? "Currency Error";
           }
           _lastCurrencyResult = displayResult;
@@ -1577,7 +1605,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
         if (speakResult &&
             _ttsInitialized &&
-            featureId != hazardDetectionFeature.id) {
+            featureId != hazardDetectionFeature.id) { // Hazard speech handled by _triggerHazardAlert
           _ttsService.speak(textToSpeak);
         }
       }
@@ -3194,4 +3222,37 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         color: currentFeature.color,
         iconOverride: iconData);
   }
+
+
+String _getObjectLocation(double centerX, double centerY) {
+  String verticalPos;
+  String horizontalPos;
+
+  // Vertical position
+  if (centerY < 1/3) {
+    verticalPos = "top";
+  } else if (centerY < 2/3) {
+    verticalPos = "middle";
+  } else {
+    verticalPos = "bottom";
+  }
+
+  // Horizontal position
+  if (centerX < 1/3) {
+    horizontalPos = "left";
+  } else if (centerX < 2/3) {
+    horizontalPos = "center";
+  } else {
+    horizontalPos = "right";
+  }
+
+  // Combine for descriptive location
+  if (verticalPos == "middle" && horizontalPos == "center") {
+    return "center";
+  }
+  // e.g. "top left", "middle right", "bottom center"
+  return "$verticalPos $horizontalPos";
+}
+
+
 }
