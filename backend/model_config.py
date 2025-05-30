@@ -74,245 +74,62 @@ elif DEFAULT_OCR_LANG not in SUPPORTED_OCR_LANGS:
 # --- Constants ---
 OBJECT_DETECTION_CONFIDENCE = 0.55
 MAX_OBJECTS_TO_RETURN = 4
-CURRENCY_DETECTION_CONFIDENCE = 0.6  # Adjustable confidence for your currency model
-CURRENCY_MODEL_PATH = "models/best.pt"  # Path to your trained currency model
-CURRENCY_CLASS_NAMES_PATH = "models/aed_class_names.txt"  # Path to your class names file
+CURRENCY_DETECTION_CONFIDENCE = 0.6  # Confidence for currency (can be used for client-side filtering of Roboflow results)
+
+# --- Roboflow API Configuration for Currency Detection ---
+ROBOFLOW_API_KEY = "Ey5qUJWyHf0BwJnIjXBv"  # YOUR ACTUAL ROBOFLOW API KEY
+ROBOFLOW_MODEL_ENDPOINT = "https://detect.roboflow.com/currency-vzh7u/2" # YOUR ROBOFLOW MODEL ENDPOINT
+
+# --- Obsolete local currency model paths (kept for reference or if you might switch back) ---
+# CURRENCY_MODEL_PATH = "models/best.pt"
+# CURRENCY_CLASS_NAMES_PATH = "models/aed_class_names.txt"
 
 
 # --- ML Model Loading ---
 logger.info("Loading ML models...")
+# These will remain None/empty if local currency model loading is disabled
 currency_model = None
 currency_class_names = []
 
 try:
     # --- Load YOLO-World Model ---
     logger.info("Loading YOLO-World model...")
-    yolo_model_path = "models/yolov8x-worldv2.pt"
+    yolo_model_path = "models/yolov8x-worldv2.pt" # Ensure this path is correct
+    if not os.path.exists(yolo_model_path):
+        logger.critical(f"YOLO-World model file NOT FOUND at: {yolo_model_path}")
+        raise FileNotFoundError(f"YOLO-World model file not found: {yolo_model_path}")
     yolo_model = YOLO(yolo_model_path)
     logger.info(f"YOLO-World model loaded from {yolo_model_path}.")
 
     TARGET_CLASSES = [  # Keeeping this extensive list as is
-        "person",
-        "bicycle",
-        "car",
-        "motorcycle",
-        "airplane",
-        "bus",
-        "train",
-        "truck",
-        "boat",
-        "traffic light",
-        "fire hydrant",
-        "stop sign",
-        "parking meter",
-        "bench",
-        "bird",
-        "cat",
-        "dog",
-        "horse",
-        "sheep",
-        "cow",
-        "elephant",
-        "bear",
-        "zebra",
-        "giraffe",
-        "backpack",
-        "umbrella",
-        "handbag",
-        "tie",
-        "suitcase",
-        "frisbee",
-        "skis",
-        "snowboard",
-        "sports ball",
-        "kite",
-        "baseball bat",
-        "baseball glove",
-        "skateboard",
-        "surfboard",
-        "tennis racket",
-        "bottle",
-        "wine glass",
-        "cup",
-        "fork",
-        "knife",
-        "spoon",
-        "bowl",
-        "banana",
-        "apple",
-        "sandwich",
-        "orange",
-        "broccoli",
-        "carrot",
-        "hot dog",
-        "pizza",
-        "donut",
-        "cake",
-        "chair",
-        "couch",
-        "potted plant",
-        "bed",
-        "dining table",
-        "toilet",
-        "tv",
-        "laptop",
-        "mouse",
-        "remote",
-        "keyboard",
-        "cell phone",
-        "microwave",
-        "oven",
-        "toaster",
-        "sink",
-        "refrigerator",
-        "book",
-        "clock",
-        "vase",
-        "scissors",
-        "teddy bear",
-        "hair drier",
-        "toothbrush",
-        "traffic cone",
-        "pen",
-        "stapler",
-        "monitor",
-        "speaker",
-        "desk lamp",
-        "trash can",
-        "bin",
-        "stairs",
-        "door",
-        "window",
-        "picture frame",
-        "whiteboard",
-        "projector",
-        "ceiling fan",
-        "pillow",
-        "blanket",
-        "towel",
-        "soap",
-        "shampoo",
-        "power outlet",
-        "light switch",
-        "keys",
-        "screwdriver",
-        "hammer",
-        "wrench",
-        "pliers",
-        "wheelchair",
-        "crutches",
-        "walker",
-        "cane",
-        "plate",
-        "mug",
-        "wallet",
-        "glasses",
-        "sunglasses",
-        "watch",
-        "jacket",
-        "shirt",
-        "pants",
-        "shorts",
-        "shoes",
-        "hat",
-        "gloves",
-        "scarf",
-        "computer monitor",
-        "desk",
-        "cabinet",
-        "shelf",
-        "drawer",
-        "curtain",
-        "radiator",
-        "air conditioner",
-        "fan",
-        "newspaper",
-        "magazine",
-        "letter",
-        "envelope",
-        "box",
-        "bag",
-        "basket",
-        "mop",
-        "broom",
-        "bucket",
-        "fire extinguisher",
-        "first aid kit",
-        "exit sign",
-        "ramp",
-        "elevator",
-        "escalator",
-        "lion",
-        "tiger",
-        "leopard",
-        "donkey",
-        "mule",
-        "goat",
-        "pig",
-        "duck",
-        "turkey",
-        "chicken",
-        "rabbit",
-        "fish",
-        "turtle",
-        "frog",
-        "toad",
-        "snake",
-        "lizard",
-        "spider",
-        "insect",
-        "crab",
-        "lobster",
-        "octopus",
-        "starfish",
-        "shrimp",
-        "squid",
-        "clam",
-        "oyster",
-        "mussel",
-        "scallop",
-        "whale",
-        "shark",
-        "ray",
-        "fishbowl",
-        "aquarium",
-        "pond",
-        "lake",
-        "river",
-        "ocean",
-        "beach",
-        "ship",
-        "submarine",
-        "scooter",
-        "stroller",
-        "rollerblades",
-        "kayak",
-        "canoe",
-        "paddleboard",
-        "bookshelf",
-        "document",
-        "paper",
-        "folder",
-        "file",
-        "briefcase",
-        "tablet",
-        "phone",
-        "headphones",
-        "microphone",
-        "printer",
-        "scanner",
-        "fax",
-        "copier",
-        "camera",
-        "video camera",
-        "television",
-        "screen",
-        "DVD",
-        "CD",
-        "video game",
-        "controller",
-        "guitar",
-        "piano",
+        "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat",
+        "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat",
+        "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack",
+        "umbrella", "handbag", "tie", "suitcase", "frisbee", "skis", "snowboard", "sports ball",
+        "kite", "baseball bat", "baseball glove", "skateboard", "surfboard", "tennis racket",
+        "bottle", "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple",
+        "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair",
+        "couch", "potted plant", "bed", "dining table", "toilet", "tv", "laptop", "mouse",
+        "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink",
+        "refrigerator", "book", "clock", "vase", "scissors", "teddy bear", "hair drier",
+        "toothbrush", "traffic cone", "pen", "stapler", "monitor", "speaker", "desk lamp",
+        "trash can", "bin", "stairs", "door", "window", "picture frame", "whiteboard",
+        "projector", "ceiling fan", "pillow", "blanket", "towel", "soap", "shampoo",
+        "power outlet", "light switch", "keys", "screwdriver", "hammer", "wrench", "pliers",
+        "wheelchair", "crutches", "walker", "cane", "plate", "mug", "wallet", "glasses",
+        "sunglasses", "watch", "jacket", "shirt", "pants", "shorts", "shoes", "hat", "gloves",
+        "scarf", "computer monitor", "desk", "cabinet", "shelf", "drawer", "curtain", "radiator",
+        "air conditioner", "fan", "newspaper", "magazine", "letter", "envelope", "box", "bag",
+        "basket", "mop", "broom", "bucket", "fire extinguisher", "first aid kit", "exit sign",
+        "ramp", "elevator", "escalator", "lion", "tiger", "leopard", "donkey", "mule", "goat",
+        "pig", "duck", "turkey", "chicken", "rabbit", "fish", "turtle", "frog", "toad", "snake",
+        "lizard", "spider", "insect", "crab", "lobster", "octopus", "starfish", "shrimp",
+        "squid", "clam", "oyster", "mussel", "scallop", "whale", "shark", "ray", "fishbowl",
+        "aquarium", "pond", "lake", "river", "ocean", "beach", "ship", "submarine", "scooter",
+        "stroller", "rollerblades", "kayak", "canoe", "paddleboard", "bookshelf", "document",
+        "paper", "folder", "file", "briefcase", "tablet", "phone", "headphones", "microphone",
+        "printer", "scanner", "fax", "copier", "camera", "video camera", "television", "screen",
+        "DVD", "CD", "video game", "controller", "guitar", "piano",
     ]
 
     logger.info(f"Setting {len(TARGET_CLASSES)} target classes for YOLO-World.")
@@ -322,19 +139,22 @@ try:
     # --- Load Places365 Model ---
     def load_places365_model():
         logger.info("Loading Places365 model...")
-        model = models.resnet50(weights=None)
+        model = models.resnet50(weights=None) # Using weights=None as we load custom checkpoint
         model.fc = torch.nn.Linear(model.fc.in_features, 365)
-        weights_filename = "models/resnet50_places365.pth.tar"
+        weights_filename = "models/resnet50_places365.pth.tar" # Ensure this path is correct
         weights_url = (
             "http://places2.csail.mit.edu/models_places365/resnet50_places365.pth.tar"
         )
         if not os.path.exists(weights_filename):
             logger.info(f"Downloading Places365 weights to {weights_filename}...")
             try:
-                response = requests.get(weights_url, timeout=120)
+                # Create models directory if it doesn't exist
+                os.makedirs(os.path.dirname(weights_filename), exist_ok=True)
+                response = requests.get(weights_url, timeout=120, stream=True)
                 response.raise_for_status()
                 with open(weights_filename, "wb") as f:
-                    f.write(response.content)
+                    for chunk in response.iter_content(chunk_size=8192):
+                        f.write(chunk)
                 logger.info("Places365 weights downloaded.")
             except requests.exceptions.RequestException as req_e:
                 logger.error(f"Failed to download Places365 weights: {req_e}")
@@ -357,11 +177,13 @@ try:
 
     # --- Load Places365 Labels ---
     places_labels = []
-    places_labels_filename = "models/categories_places365.txt"
+    places_labels_filename = "models/categories_places365.txt" # Ensure this path is correct
     places_labels_url = "https://raw.githubusercontent.com/csailvision/places365/master/categories_places365.txt"
     try:
         if not os.path.exists(places_labels_filename):
             logger.info(f"Downloading Places365 labels to {places_labels_filename}...")
+            # Create models directory if it doesn't exist
+            os.makedirs(os.path.dirname(places_labels_filename), exist_ok=True)
             response = requests.get(places_labels_url, timeout=30)
             response.raise_for_status()
             with open(places_labels_filename, "w", encoding="utf-8") as f:
@@ -375,9 +197,9 @@ try:
             for line in f:
                 if line.strip():
                     parts = line.strip().split(" ")
-                    label = parts[0].split("/")[-1]
+                    label = parts[0].split("/")[-1] # Takes the last part, e.g., "yard" from "/y/yard"
                     places_labels.append(label)
-        if len(places_labels) != 365:
+        if len(places_labels) != 365: # Standard Places365 has 365 categories
             logger.warning(
                 f"Loaded {len(places_labels)} Places365 labels (expected 365)."
             )
@@ -397,43 +219,28 @@ try:
         ]
     )
 
-    # --- Load Custom Currency Detection Model (Best.pt) ---
-    if os.path.exists(CURRENCY_MODEL_PATH):
-        logger.info(f"Loading custom currency model from: {CURRENCY_MODEL_PATH}")
-        currency_model = YOLO(CURRENCY_MODEL_PATH)  # Assuming it's a YOLO model
-        logger.info("Custom currency model loaded.")
-        if os.path.exists(CURRENCY_CLASS_NAMES_PATH):
-            try:
-                with open(CURRENCY_CLASS_NAMES_PATH, "r") as f:
-                    currency_class_names = [line.strip() for line in f if line.strip()]
-                if currency_class_names:
-                    logger.info(
-                        f"Loaded {len(currency_class_names)} currency class names: {currency_class_names}"
-                    )
-                else:
-                    logger.warning(
-                        f"Currency class names file '{CURRENCY_CLASS_NAMES_PATH}' is empty."
-                    )
-            except Exception as e:
-                logger.error(
-                    f"Error loading currency class names from '{CURRENCY_CLASS_NAMES_PATH}': {e}"
-                )
-        else:
-            logger.warning(
-                f"Currency class names file not found: {CURRENCY_CLASS_NAMES_PATH}. Detection will use raw class IDs."
-            )
+    # --- Custom Currency Detection Model (Roboflow API) ---
+    # The local currency model (Best.pt) loading is now removed.
+    # `currency_model` will remain None and `currency_class_names` will remain [].
+    # The `detect_currency` function in your other file should be the one updated to call Roboflow API.
+    logger.info("Local currency model loading (Best.pt) is disabled. Currency detection will use Roboflow API.")
+    if not ROBOFLOW_API_KEY or ROBOFLOW_API_KEY == "Ey5qUJWyHf0BwJnIjXBv" or not ROBOFLOW_MODEL_ENDPOINT: # Check if placeholder or empty
+        logger.warning(
+            "Roboflow API Key or Endpoint for currency detection is a placeholder or not fully configured. "
+            "Ensure ROBOFLOW_API_KEY and ROBOFLOW_MODEL_ENDPOINT are set correctly for currency detection to work."
+        )
     else:
-        logger.error(f"Custom currency model NOT FOUND at: {CURRENCY_MODEL_PATH}")
-        logger.warning("Currency detection feature will not be available.")
+        logger.info("Roboflow API configured for currency detection.")
 
-    logger.info("All ML models loaded (or attempted).")
 
-except SystemExit as se:
+    logger.info("All other ML models loaded (or attempted).")
+
+except SystemExit as se: # pylint: disable=broad-except
     logger.critical(str(se))
-    sys.exit(1)
+    sys.exit(1) # Propagate the exit code if SystemExit was raised directly
 except FileNotFoundError as fnf_e:
     logger.critical(f"Required model file not found: {fnf_e}", exc_info=False)
-    sys.exit(f"Missing file: {fnf_e}")
-except Exception as e:
+    sys.exit(f"Missing file: {fnf_e}") # Exit with a custom message
+except Exception as e: # pylint: disable=broad-except
     logger.critical(f"FATAL ERROR DURING MODEL LOADING: {e}", exc_info=True)
-    sys.exit(f"Model load failed: {e}")
+    sys.exit(f"Model load failed: {e}") # Exit with a custom message
