@@ -132,8 +132,21 @@ def clean_text_with_llm(raw_text, client_sid="Unknown"):
     )
     start_time = time.time()
     try:
+        # old prompt
+        # prompt = (
+        #     "Analyze the provided image. Based *only* on the main content, "
+        #     "which of the following analysis types is MOST appropriate? "
+        #     "Choose exactly ONE:\n"
+        #     "- 'object_detection': Only choose this mode if the image has an object or thing in the center of the screen, as if the user is displaying that item.\n"
+        #     "- 'hazard_detection': If the image seems to contain items that could be hazards (e.g., a car, a stop sign, a knife, an animal). You have to be incredibly sure this could be a clear and obvious threat for a blind or partially blind person to select this option. \n"
+        #     "- 'scene_detection': Only choose this mode if the center of the image is not focused on one particular object or thing and is instead taking a wide angle that doesn't have anything prominently displayed in the center and is showing a general scene.\n"
+        #     "- 'text_detection': If the image contains significant readable text (like a document, sign, or label).\n"
+        #     "- 'currency_detection': If the image clearly shows paper money.\n"
+        #     "Respond with ONLY the chosen identifier string (e.g., 'scene_detection') and nothing else."
+        # )
+
         prompt = (
-            "The following is a piece of text scanned. This scan contains some errors, like random extra characters. Clean the text without changing much. Reply with only the cleaned text, nothing else. Here is the text:\n"
+            "The following is a piece of text scanned. This scan contains some errors, like random extra characters. Clean the text without changing much. Reply with only the cleaned text, in the same language you scanned it in, nothing else. If you got it in English, output it in English, and so on. Here is the text:\n"
             f"{raw_text}"
         )
 

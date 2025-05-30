@@ -7,6 +7,7 @@ from operations.detect_objects import *
 from operations.detect_scene import *
 from operations.detect_text import *
 from operations.detect_currency import *
+
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"  # Keep if needed
 
 from flask import Flask, request, jsonify, render_template
@@ -43,7 +44,6 @@ socketio = SocketIO(
     app,
     cors_allowed_origins="*",
     max_http_buffer_size=20 * 1024 * 1024,  # 20MB
-    max_http_buffer_size=20 * 1024 * 1024,  # 20MB
     async_mode="threading",
 )
 
@@ -68,15 +68,11 @@ def handle_message(data):
     client_sid = request.sid
     start_time = time.time()
     detection_type_from_payload = "unknown"
-    supervision_request_type = None  # Initialize
     supervision_request_type = None
     final_response_payload = None
 
     try:
         if not isinstance(data, dict):
-            logger.warning(
-                f"Invalid data format from {client_sid}. Expected dict, got {type(data)}."
-            )
             logger.warning(
                 f"Invalid data format from {client_sid}. Expected dict, got {type(data)}."
             )
@@ -91,14 +87,7 @@ def handle_message(data):
         supervision_request_type = data.get(
             "request_type"
         )  # Will be None if not present
-        supervision_request_type = data.get(
-            "request_type"
-        )  # Will be None if not present
-
         if not image_data or not detection_type_from_payload:
-            logger.warning(
-                f"Missing 'image' or 'type' from {client_sid}. Payload: {data}"
-            )
             logger.warning(
                 f"Missing 'image' or 'type' from {client_sid}. Payload: {data}"
             )
@@ -113,15 +102,11 @@ def handle_message(data):
                 _, encoded = image_data.split(",", 1)
             else:
                 encoded = image_data  # Assume it's already base64 if no prefix
-                encoded = image_data  # Assume it's already base64 if no prefix
             image_bytes = base64.b64decode(encoded)
             image_np_buffer = np.frombuffer(image_bytes, np.uint8)
             image_np = cv2.imdecode(image_np_buffer, cv2.IMREAD_COLOR)
 
             if image_np is None:
-                raise ValueError(
-                    "cv2.imdecode returned None. Image data might be corrupt or not a supported format."
-                )
                 raise ValueError(
                     "cv2.imdecode returned None. Image data might be corrupt or not a supported format."
                 )
@@ -145,9 +130,6 @@ def handle_message(data):
             )
             # Ensure OLLAMA_MODEL_NAME and OLLAMA_API_URL are available for get_llm_feature_choice
             # These should be imported from model_config.py
-            chosen_feature_by_llm = get_llm_feature_choice(
-                image_np, client_sid
-            )  # Pass client_sid if used by the function
             chosen_feature_by_llm = get_llm_feature_choice(image_np, client_sid)
             supervision_string_result = "Error: LLM feature execution failed"
 
@@ -164,9 +146,6 @@ def handle_message(data):
                         if obj_dict_result.get(
                             "status"
                         ) == "ok" and obj_dict_result.get("detections"):
-                        if obj_dict_result.get(
-                            "status"
-                        ) == "ok" and obj_dict_result.get("detections"):
                             names = [d["name"] for d in obj_dict_result["detections"]]
                             supervision_string_result = (
                                 ", ".join(names)
@@ -174,9 +153,6 @@ def handle_message(data):
                                 else "No objects detected by SuperVision"
                             )
                         elif obj_dict_result.get("status") == "none":
-                            supervision_string_result = (
-                                "No objects detected by SuperVision"
-                            )
                             supervision_string_result = (
                                 "No objects detected by SuperVision"
                             )
@@ -193,9 +169,6 @@ def handle_message(data):
                             supervision_string_result = (
                                 f"The scene is likely a {scene_label}."
                             )
-                            supervision_string_result = (
-                                f"The scene is likely a {scene_label}."
-                            )
                     elif chosen_feature_by_llm == "text_detection":
                         # detect_text returns a string of detected text or an error/no text message
                         text_content = detect_text(
@@ -204,7 +177,6 @@ def handle_message(data):
                         # DEFAULT_OCR_LANG should be available from `from model_config import *`
                         text_content = detect_text(image_np, DEFAULT_OCR_LANG)
                         if "Error" in text_content:
-                            supervision_string_result = f"Text analysis: {text_content}"
                             supervision_string_result = f"Text analysis: {text_content}"
                         elif "No text detected" in text_content:
                             supervision_string_result = "No text found in the image."
@@ -234,9 +206,6 @@ def handle_message(data):
                             supervision_string_result = (
                                 "No currency detected by SuperVision"
                             )
-                            supervision_string_result = (
-                                "No currency detected by SuperVision"
-                            )
                         else:
                             supervision_string_result = currency_output.get(
                                 "message", "Currency detection issue for SuperVision"
@@ -244,9 +213,6 @@ def handle_message(data):
                     else:
                         logger.error(
                             f"[{client_sid}] Invalid feature '{chosen_feature_by_llm}' from LLM."
-                        )
-                        supervision_string_result = (
-                            "Error: Invalid analysis type by LLM"
                         )
                         supervision_string_result = (
                             "Error: Invalid analysis type by LLM"
@@ -277,7 +243,6 @@ def handle_message(data):
                     "is_from_supervision_llm": True,
                 }
         else:  # Direct request (not LLM routed supervision)
-        else:  # Direct request (not LLM routed supervision)
             logger.info(
                 f"Processing direct request '{detection_type_from_payload}' from {client_sid}"
             )
@@ -285,11 +250,6 @@ def handle_message(data):
                 "status": "error",
                 "message": "Error: Unknown processing error",
             }  # Default
-            detection_function_output = {
-                "status": "error",
-                "message": "Error: Unknown processing error",
-            }  # Default
-
             if detection_type_from_payload == "object_detection":
                 detection_function_output = detect_objects(image_np)
             elif detection_type_from_payload == "focus_detection":
@@ -316,13 +276,6 @@ def handle_message(data):
                 elif (
                     "Unknown" in scene_label
                 ):  # detect_scene indicates no confident detection with "Unknown"
-                scene_label = detect_scene(image_np)
-                if "Error" in scene_label:
-                    detection_function_output = {
-                        "status": "error",
-                        "message": scene_label,
-                    }
-                elif "Unknown" in scene_label:
                     detection_function_output = {"status": "none", "scene": scene_label}
                 else:
                     detection_function_output = {"status": "ok", "scene": scene_label}
@@ -340,25 +293,13 @@ def handle_message(data):
                     )
                 text_result_str = detect_text(
                     image_np, language_code=validated_language
-                )  # Returns a string
-
-                text_result_str = detect_text(
-                    image_np, language_code=validated_language
                 )
                 if "Error" in text_result_str:
                     detection_function_output = {
                         "status": "error",
                         "message": text_result_str,
                     }
-                    detection_function_output = {
-                        "status": "error",
-                        "message": text_result_str,
-                    }
                 elif "No text detected" in text_result_str:
-                    detection_function_output = {
-                        "status": "none",
-                        "text": text_result_str,
-                    }
                     detection_function_output = {
                         "status": "none",
                         "text": text_result_str,
@@ -374,32 +315,31 @@ def handle_message(data):
                 detection_function_output = detect_objects(
                     image_np
                 )  # Or a specialized hazard function
+                logger.info(
+                    f"[{client_sid}] Text detected by OCR (Direct), attempting LLM cleaning. Original length: {len(text_result_str)}"
+                )
+                cleaned_text = clean_text_with_llm(text_result_str, client_sid)
+                if cleaned_text:
+                    detection_function_output = {
+                        "status": "ok",
+                        "text": cleaned_text,
+                    }
                     logger.info(
-                        f"[{client_sid}] Text detected by OCR (Direct), attempting LLM cleaning. Original length: {len(text_result_str)}"
+                        f"[{client_sid}] Text cleaning successful (Direct). Cleaned length: {len(cleaned_text)}"
                     )
-                    cleaned_text = clean_text_with_llm(text_result_str, client_sid)
-                    if cleaned_text:
-                        detection_function_output = {
-                            "status": "ok",
-                            "text": cleaned_text,
-                        }
-                        logger.info(
-                            f"[{client_sid}] Text cleaning successful (Direct). Cleaned length: {len(cleaned_text)}"
-                        )
-                    else:
-                        detection_function_output = {
-                            "status": "ok",
-                            "text": text_result_str,
-                            "warning": "Text cleaning by LLM failed, showing original OCR text.",
-                        }
-                        logger.warning(
-                            f"[{client_sid}] Text cleaning failed (Direct). Using original OCR text."
-                        )
+                else:
+                    detection_function_output = {
+                        "status": "ok",
+                        "text": text_result_str,
+                        "warning": "Text cleaning by LLM failed, showing original OCR text.",
+                    }
+                    logger.warning(
+                        f"[{client_sid}] Text cleaning failed (Direct). Using original OCR text."
+                    )
             elif detection_type_from_payload == "hazard_detection":
                 detection_function_output = detect_objects(image_np)
             elif detection_type_from_payload == "currency_detection":
                 detection_function_output = detect_currency(image_np)  # Returns dict
-                detection_function_output = detect_currency(image_np)
             else:
                 logger.warning(
                     f"Unsupported direct type '{detection_type_from_payload}' from {client_sid}"
@@ -408,9 +348,7 @@ def handle_message(data):
                     "status": "error",
                     "message": f"Unsupported type '{detection_type_from_payload}'",
                 }
-
             final_response_payload = {"result": detection_function_output}
-
         if final_response_payload:
             processing_time = time.time() - start_time
             log_result_summary = str(final_response_payload.get("result", "N/A"))
@@ -422,9 +360,6 @@ def handle_message(data):
                 (log_result_summary[:100] + "...")
                 if len(log_result_summary) > 100
                 else log_result_summary
-            )
-            log_type = final_response_payload.get(
-                "feature_id", detection_type_from_payload
             )
             log_type = final_response_payload.get(
                 "feature_id", detection_type_from_payload
@@ -467,8 +402,6 @@ def handle_message(data):
             }
             if (
                 detection_type_from_payload == "supervision"
-                and supervision_request_type
-                == "llm_route"  # Check supervision_request_type here
                 and supervision_request_type == "llm_route"
             ):
                 error_resp["feature_id"] = "supervision_error"
@@ -484,11 +417,9 @@ def default_error_handler(e):
     logger.error(f"Unhandled WebSocket Error for SID {client_sid}: {e}", exc_info=True)
     try:
         if client_sid != "UnknownSID":  # Avoid emitting if SID is not available
-        if client_sid != "UnknownSID":
             emit(
                 "response",
                 {"result": {"status": "error", "message": "Internal WebSocket error."}},
-                room=client_sid,  # Send to specific client if SID is known
                 room=client_sid,  # Send to specific client if SID is known
             )
     except Exception as emit_err:
@@ -531,7 +462,6 @@ if __name__ == "__main__":
     port_num = int(os.environ.get("FLASK_PORT", 5000))
     debug_mode = os.environ.get("FLASK_DEBUG", "False").lower() in ("true", "1", "t")
     use_reloader = debug_mode  # Typically reloader is used in debug mode
-    use_reloader = debug_mode
 
     logger.info(
         f"Server listening on http://{host_ip}:{port_num} (Debug: {debug_mode}, Reloader: {use_reloader})"
@@ -557,18 +487,10 @@ if __name__ == "__main__":
         "ROBOFLOW_MODEL_ENDPOINT" in globals()
         and "CURRENCY_DETECTION_CONFIDENCE" in globals()
     ):
-    # Assuming ROBOFLOW_MODEL_ENDPOINT and CURRENCY_DETECTION_CONFIDENCE are in model_config.py
-    if (
-        "ROBOFLOW_MODEL_ENDPOINT" in globals()
-        and "CURRENCY_DETECTION_CONFIDENCE" in globals()
-    ):
         logger.info(
             f" * Currency Detection: Roboflow API Endpoint='{ROBOFLOW_MODEL_ENDPOINT}', Client Confidence Threshold='{CURRENCY_DETECTION_CONFIDENCE}'"
         )
     else:
-        logger.info(
-            " * Currency Detection: Roboflow API Not configured / variables not found in model_config"
-        )
         logger.info(
             " * Currency Detection: Roboflow API Not configured / variables not found in model_config"
         )
@@ -587,18 +509,13 @@ if __name__ == "__main__":
             logger.critical(
                 f"Port {port_num} is already in use on {host_ip}. Cannot start server."
             )
-            logger.critical(
-                f"Port {port_num} is already in use on {host_ip}. Cannot start server."
-            )
         else:
             logger.critical(
                 f"Failed to start server due to OS Error: {os_e}", exc_info=True
             )
         sys.exit(1)  # Exit if server cannot start
-        sys.exit(1)
     except Exception as run_e:
         logger.critical(f"Failed to start server: {run_e}", exc_info=True)
-        sys.exit(1)  # Exit if server cannot start
         sys.exit(1)
     finally:
         logger.info("Server shutdown.")
