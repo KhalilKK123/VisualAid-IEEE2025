@@ -1,7 +1,7 @@
 import os
+import re # Import regex module
 
 from model_config import *
-
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"  # Keep if needed
 
 import cv2
@@ -50,16 +50,54 @@ def detect_text(image_np, language_code=DEFAULT_OCR_LANG):
         custom_config = f"-l {validated_lang} --oem 3 --psm 6"
         logger.debug(f"Using Tesseract config: {custom_config}")
         detected_text = pytesseract.image_to_string(img_pil, config=custom_config)
-        result_str = detected_text.strip()
+        
+        # --- Heuristic Filtering Starts Here ---
+        filtered_lines = []
+        for line in detected_text.splitlines():
+            stripped_line = line.strip()
+            if not stripped_line:
+                continue
+
+            # Heuristic 1 & 2: Remove non-alphanumeric junk and minimum length
+            # Keep letters, numbers, and basic punctuation (.,!?-')
+            cleaned_line = re.sub(r'[^a-zA-Z0-9\s.,!?-]', '', stripped_line)
+            
+            # Remove multiple spaces
+            cleaned_line = re.sub(r'\s+', ' ', cleaned_line).strip()
+
+            if not cleaned_line: # After cleaning, if it's empty, skip
+                continue
+
+            # Heuristic 3: Alpha-Numeric Ratio Check
+            alpha_chars = sum(c.isalpha() for c in cleaned_line)
+            total_chars = len(cleaned_line)
+            
+            # Define a threshold for what constitutes "meaningful" text.
+            # This might need tuning based on your specific use case.
+            # A low ratio often indicates gibberish or a lot of numbers/symbols.
+            ALPHA_RATIO_THRESHOLD = 0.5 # At least 50% of characters should be alphabetic
+            
+            if total_chars > 0 and (alpha_chars / total_chars) < ALPHA_RATIO_THRESHOLD:
+                logger.debug(f"Discarding line due to low alpha ratio: '{cleaned_line}' (Ratio: {alpha_chars/total_chars:.2f})")
+                continue
+
+            # Heuristic 2: Minimum line length check (after cleaning)
+            MIN_LINE_LENGTH = 3 # Adjust as needed
+            if len(cleaned_line) < MIN_LINE_LENGTH:
+                logger.debug(f"Discarding line due to short length: '{cleaned_line}' (Length: {len(cleaned_line)})")
+                continue
+            
+            filtered_lines.append(cleaned_line)
+        
+        result_str = "\n".join(filtered_lines)
+        # --- Heuristic Filtering Ends Here ---
+
         if not result_str:
-            logger.debug(f"Tesseract ({validated_lang}): No text found.")
+            logger.debug(f"Tesseract ({validated_lang}): No meaningful text found after filtering.")
             return "No text detected"
         else:
-            result_str = "\n".join(
-                [line.strip() for line in result_str.splitlines() if line.strip()]
-            )
             log_text = result_str.replace("\n", " ").replace("\r", "")[:100]
-            logger.debug(f"Tesseract ({validated_lang}) OK: Found '{log_text}...'")
+            logger.debug(f"Tesseract ({validated_lang}) OK: Found '{log_text}...' (Filtered)")
             return result_str
     except pytesseract.TesseractNotFoundError:
         logger.error("Tesseract executable not found.")
