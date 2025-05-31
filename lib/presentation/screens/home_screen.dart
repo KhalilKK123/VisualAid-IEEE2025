@@ -426,18 +426,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       TutorialStepData(
         text:
             "At the top, you'll see the title of the currently selected feature, like 'Object Detection'.",
-        mediaAssetPath:
-            "assets/tutorial_media/feature_title_example.png", // Placeholder - REPLACE
-        mediaType: MediaType.image,
-        mediaHeight: 200,
-        mediaFit: BoxFit.fitWidth,
+
       ),
       TutorialStepData(
         text: "At the bottom center is the main action button.",
-        mediaAssetPath:
-            "assets/tutorial_media/action_button_example.gif", // Placeholder - REPLACE
-        mediaType: MediaType.gif,
-        mediaHeight: 150,
+
       ),
       TutorialStepData(
         text:
@@ -452,10 +445,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             "On the left and right edges of the screen, you'll find arrow buttons.",
         mediaAssetPath:
             "assets/tutorial_media/navigation_arrows_example.mp4", // Placeholder - REPLACE
-        mediaType: MediaType.video,
-        autoAdvanceAfterMediaEnds:
-            false, // Set to true if you want auto-advance after video
-        mediaHeight: 250,
+
       ),
       TutorialStepData(
         text:
@@ -464,18 +454,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       TutorialStepData(
         text:
             "In the top right corner, the gear icon opens the settings screen. Here, you can adjust voice speed, language for text recognition, and object detection filters. you can also chnage the object detection filters to filter what types of objects are detected, uisng voice commands, just hold the main action button and say the phrase \" category \" then name your category.",
-        mediaAssetPath:
-            "assets/tutorial_media/settings_icon_example.png", // Placeholder - REPLACE
-        mediaType: MediaType.image,
-        mediaHeight: 80,
+
       ),
       TutorialStepData(
         text:
             "And in the top left corner, you'll see a question mark icon. That's the tutorial button! Tap it anytime for a quick explanation of the current feature. Long-press it to replay this full tutorial.",
-        mediaAssetPath:
-            "assets/tutorial_media/tutorial_button_example.png", // Placeholder - REPLACE
-        mediaType: MediaType.image,
-        mediaHeight: 80,
+
       ),
       TutorialStepData(
         text: "Blink AI offers several powerful features. Let's explore them.",
